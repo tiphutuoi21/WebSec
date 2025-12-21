@@ -133,12 +133,22 @@ class SecurityHelper {
             
             $password_lower = strtolower($password);
             
-            // Check name
+            // Check name - only match complete words or significant parts
             if (!empty($name)) {
                 $name_parts = explode(' ', $name);
                 foreach ($name_parts as $part) {
-                    if (strlen($part) >= 3 && strpos($password_lower, strtolower($part)) !== false) {
-                        return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên của bạn'];
+                    $part_lower = strtolower(trim($part));
+                    if (strlen($part_lower) >= 4) {
+                        // For 4+ character names, check substring match
+                        if (strpos($password_lower, $part_lower) !== false) {
+                            return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên của bạn'];
+                        }
+                    } elseif (strlen($part_lower) == 3) {
+                        // For 3-character names, check as whole word only to avoid false positives
+                        $name_pattern = '/\b' . preg_quote($part_lower, '/') . '\b/i';
+                        if (preg_match($name_pattern, $password_lower)) {
+                            return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên của bạn'];
+                        }
                     }
                 }
             }
@@ -157,9 +167,19 @@ class SecurityHelper {
                 }
             }
             
-            // Check city
-            if (!empty($city) && strlen($city) >= 3 && strpos($password_lower, $city) !== false) {
-                return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên thành phố của bạn'];
+            // Check city - only match if city is a complete word or significant part
+            if (!empty($city) && strlen($city) >= 4) {
+                // Only check if city name is 4+ characters to avoid false positives
+                if (strpos($password_lower, $city) !== false) {
+                    return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên thành phố của bạn'];
+                }
+            } elseif (!empty($city) && strlen($city) == 3) {
+                // For 3-character city names, check as whole word only (with word boundaries)
+                // This prevents false positives like "Nhu" matching in "Nhu123@@"
+                $city_pattern = '/\b' . preg_quote($city, '/') . '\b/i';
+                if (preg_match($city_pattern, $password_lower)) {
+                    return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên thành phố của bạn'];
+                }
             }
         }
         

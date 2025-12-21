@@ -57,16 +57,43 @@
         $row = mysqli_fetch_array($result);
         
         // Check if email is verified
+        // If email is not verified, check if PHPMailer is available
+        // If PHPMailer is not available, auto-verify and allow login
         if($row['email_verified'] == 0) {
-            // Log unverified login attempt
-            SecurityHelper::logSecurityEvent($con, 'unverified_login_attempt', 'Email: ' . $email);
-            ?>
-            <script>
-                window.alert("Please verify your email before logging in. Check your email for the verification link.");
-            </script>
-            <meta http-equiv="refresh" content="1;url=login.php" />
-            <?php
+            // Check if PHPMailer is available
+            $vendor_autoload = __DIR__ . '/vendor/autoload.php';
+            $phpmailer_available = file_exists($vendor_autoload) && class_exists('PHPMailer\PHPMailer\PHPMailer');
+            
+            if ($phpmailer_available) {
+                // PHPMailer is available - require email verification
+                SecurityHelper::logSecurityEvent($con, 'unverified_login_attempt', 'Email: ' . $email);
+                ?>
+                <script>
+                    window.alert("Vui lòng xác thực email trước khi đăng nhập. Kiểm tra email của bạn để tìm link xác thực.");
+                </script>
+                <meta http-equiv="refresh" content="1;url=login.php" />
+                <?php
+            } else {
+                // PHPMailer not available - auto-verify and allow login
+                $auto_verify_query = "UPDATE users SET email_verified = 1 WHERE id = ?";
+                $auto_verify_stmt = mysqli_prepare($con, $auto_verify_query);
+                if ($auto_verify_stmt) {
+                    mysqli_stmt_bind_param($auto_verify_stmt, "i", $row['id']);
+                    mysqli_stmt_execute($auto_verify_stmt);
+                    mysqli_stmt_close($auto_verify_stmt);
+                }
+                
+                // Create secure session for user
+                SessionManager::createUserSession($con, $row['id'], $email, 3, 'customer');
+                
+                // Log successful login
+                SecurityHelper::logSecurityEvent($con, 'customer_login', 'Successful login (auto-verified)');
+                
+                header('location: products.php');
+                exit();
+            }
         } else {
+            // Email is verified - proceed with normal login
             // Create secure session for user
             SessionManager::createUserSession($con, $row['id'], $email, 3, 'customer');
             

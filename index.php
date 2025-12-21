@@ -34,45 +34,45 @@ session_start();
                    </center>
                </div>
            </div>
-           <div class="container">
+           <div class="container" style="margin-top: 50px; margin-bottom: 50px;">
                <div class="row">
-                   <div class="col-xs-4">
-                       <div  class="thumbnail">
-                           <a href="products.php?category=new">
-                                <img src="img/camera.jpg" alt="Hàng Mới Về" style="height: 200px; object-fit: cover;">
-                           </a>
-                           <center>
-                                <div class="caption">
-                                        <p id="autoResize">Hàng Mới Về</p>
-                                        <p>Những mô hình mới nhất vừa về kho</p>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-red">
+                           <a href="products.php?category=new" class="category-link">
+                                <div class="category-image-wrapper">
+                                    <img src="img/anh1.jpg" alt="Hàng Mới Về" class="category-image">
                                 </div>
-                           </center>
+                                <div class="category-content">
+                                    <h3 class="category-title">Hàng Mới Về</h3>
+                                    <p class="category-description">Những mô hình mới nhất vừa về kho</p>
+                                </div>
+                           </a>
                        </div>
                    </div>
-                   <div class="col-xs-4">
-                       <div class="thumbnail">
-                           <a href="products.php?category=bestseller">
-                               <img src="img/watch.jpg" alt="Best Seller" style="height: 200px; object-fit: cover;">
-                           </a>
-                           <center>
-                                <div class="caption">
-                                    <p id="autoResize">Best Seller</p>
-                                    <p>Sản phẩm bán chạy nhất</p>
-                                </div>
-                           </center>
-                       </div>
-                   </div>
-                   <div class="col-xs-4">
-                       <div class="thumbnail">
-                           <a href="products.php">
-                               <img src="img/shirt.jpg" alt="Tất Cả Sản Phẩm" style="height: 200px; object-fit: cover;">
-                           </a>
-                           <center>
-                               <div class="caption">
-                                   <p id="autoResize">Tất Cả Sản Phẩm</p>
-                                   <p>Bộ sưu tập mô hình đầy đủ nhất</p>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-yellow">
+                           <a href="products.php?category=bestseller" class="category-link">
+                               <div class="category-image-wrapper">
+                                   <img src="img/anh2.jpg" alt="Best Seller" class="category-image">
                                </div>
-                           </center>
+                               <div class="category-content">
+                                   <h3 class="category-title">Best Seller</h3>
+                                   <p class="category-description">Sản phẩm bán chạy nhất</p>
+                               </div>
+                           </a>
+                       </div>
+                   </div>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-black">
+                           <a href="products.php" class="category-link">
+                               <div class="category-image-wrapper">
+                                   <img src="img/anh3.jpg" alt="Tất Cả Sản Phẩm" class="category-image">
+                               </div>
+                               <div class="category-content">
+                                   <h3 class="category-title">Tất Cả Sản Phẩm</h3>
+                                   <p class="category-description">Bộ sưu tập mô hình đầy đủ nhất</p>
+                               </div>
+                           </a>
                        </div>
                    </div>
                </div>
@@ -87,5 +87,7 @@ session_start();
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

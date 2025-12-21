@@ -70,34 +70,38 @@
                 require 'header.php';
             ?>
             <div class="container">
-                <div class="jumbotron">
-                    <h1><?php echo htmlspecialchars($page_title); ?></h1>
-                    <p><?php echo htmlspecialchars($page_description); ?></p>
-                    
-                    <!-- Search Bar in Jumbotron -->
-                    <hr>
-                    <form method="POST" action="search.php" style="margin-top: 20px;">
-                        <div class="input-group" style="margin-bottom: 10px;">
-                            <input type="text" 
-                                   class="form-control" 
-                                   placeholder="Tìm kiếm mô hình..." 
-                                   name="search"
-                                   maxlength="255"
-                                   style="font-size: 16px; padding: 10px;"
-                                   required>
-                            <span class="input-group-btn">
-                                <button class="btn btn-warning" type="submit" style="padding: 10px 20px; font-size: 16px;">
-                                    <span class="glyphicon glyphicon-search"></span> Tìm Kiếm
-                                </button>
-                            </span>
+                <div class="page-header-section">
+                    <div class="page-header-content">
+                        <h1 class="page-title"><?php echo htmlspecialchars($page_title); ?></h1>
+                        <p class="page-subtitle"><?php echo htmlspecialchars($page_description); ?></p>
+                        
+                        <!-- Search Bar -->
+                        <div class="page-search-wrapper">
+                            <form method="POST" action="search.php" class="page-search-form">
+                                <div class="input-group page-search-group">
+                                    <input type="text" 
+                                           class="form-control live-search-input page-search-input" 
+                                           id="productsSearchInput"
+                                           placeholder="Tìm kiếm mô hình..." 
+                                           name="search"
+                                           maxlength="255"
+                                           required>
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-page-search" type="submit">
+                                            <span class="glyphicon glyphicon-search"></span> Tìm Kiếm
+                                        </button>
+                                    </span>
+                                    <div id="productsSearchResults" class="live-search-results"></div>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
             <div class="container">
                 <?php if (count($products) > 0): ?>
-                    <div class="row">
-                        <?php 
+                <div class="row">
+                                        <?php
                         $col_count = 0;
                         foreach ($products as $product): 
                             $col_count++;
@@ -107,39 +111,64 @@
                             }
                         ?>
                             <div class="col-md-3 col-sm-6">
-                                <div class="thumbnail">
-                                    <a href="product.php?id=<?php echo $product['id']; ?>">
-                                        <?php 
-                                        // Try to get image, fallback to default
-                                        $image_path = 'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.jpg';
-                                        if (!file_exists($image_path)) {
-                                            // Use first available image as fallback
-                                            $image_path = 'img/camera.jpg';
-                                        }
-                                        ?>
-                                        <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" style="height: 200px; object-fit: cover; width: 100%;">
-                                    </a>
-                                    <center>
-                                        <div class="caption">
-                                            <h3><?php echo htmlspecialchars($product['name']); ?></h3>
-                                            <p>Giá: <?php echo number_format($product['price'], 0, ',', '.'); ?> VNĐ</p>
-                                            <?php if (!empty($product['stock_quantity'])): ?>
-                                                <p><small>Còn lại: <?php echo $product['stock_quantity']; ?> sản phẩm</small></p>
-                                            <?php endif; ?>
-                                            <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-info btn-block">Xem Chi Tiết</a>
+                                <div class="product-card">
+                                    <div class="product-image-container">
+                                        <a href="product.php?id=<?php echo intval($product['id']); ?>">
+                                            <?php 
+                                            // Use product image from database if available
+                                            if (!empty($product['image']) && file_exists($product['image'])) {
+                                                $image_path = $product['image'];
+                                            } else {
+                                                // Try to find image by product name
+                                                $image_path = 'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.jpg';
+                                                if (!file_exists($image_path)) {
+                                                    // Try with different extensions
+                                                    $possible_paths = array(
+                                                        'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.png',
+                                                        'img/' . strtolower(str_replace('#', '', str_replace(' ', '_', $product['name']))) . '.jpg',
+                                                        'img/camera.jpg' // Default fallback
+                                                    );
+                                                    $image_path = 'img/camera.jpg';
+                                                    foreach($possible_paths as $path) {
+                                                        if(file_exists($path)) {
+                                                            $image_path = $path;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ?>
+                                            <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-card-image">
+                                        </a>
+                                        <?php if (!empty($product['stock_quantity']) && $product['stock_quantity'] < 5): ?>
+                                            <span class="product-badge product-badge-low">Sắp hết</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="product-card-body">
+                                        <h3 class="product-card-title"><?php echo htmlspecialchars($product['name']); ?></h3>
+                                        <div class="product-card-price">
+                                            <?php echo number_format($product['price'], 0, ',', '.'); ?> VNĐ
+                                        </div>
+                                        <?php if (!empty($product['stock_quantity'])): ?>
+                                            <div class="product-card-stock">
+                                                <span class="glyphicon glyphicon-check"></span> Còn lại: <?php echo $product['stock_quantity']; ?> sản phẩm
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="product-card-actions">
+                                            <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-product-detail">Xem Chi Tiết</a>
                                             <?php if(!isset($_SESSION['email'])): ?>
-                                                <p><a href="login.php" role="button" class="btn btn-primary btn-block">Mua Ngay</a></p>
+                                                <a href="login.php" class="btn btn-product-buy">Mua Ngay</a>
                                             <?php else:
                                                 if(check_if_added_to_cart($product['id'])):
-                                                    echo '<a href="#" class="btn btn-block btn-success disabled">Đã thêm vào giỏ</a>';
+                                                    echo '<a href="#" class="btn btn-product-added disabled">Đã thêm vào giỏ</a>';
                                                 else:
                                             ?>
-                                                <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-block btn-primary" name="add" value="add">Thêm vào giỏ</a>
+                                                <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-product-add">Thêm vào giỏ</a>
                                             <?php 
                                                 endif;
                                             endif; ?>
                                         </div>
-                                    </center>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -162,5 +191,88 @@
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
+        
+        <script type="text/javascript">
+        (function() {
+            var searchInput = document.getElementById('productsSearchInput');
+            var resultsDiv = document.getElementById('productsSearchResults');
+            var searchTimeout;
+            
+            if (searchInput && resultsDiv) {
+                searchInput.addEventListener('input', function() {
+                    var query = this.value.trim();
+                    
+                    clearTimeout(searchTimeout);
+                    
+                    if (query.length < 2) {
+                        resultsDiv.innerHTML = '';
+                        resultsDiv.style.display = 'none';
+                        return;
+                    }
+                    
+                    searchTimeout = setTimeout(function() {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('GET', 'ajax_search.php?q=' + encodeURIComponent(query), true);
+                        xhr.onreadystatechange = function() {
+                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                try {
+                                    var results = JSON.parse(xhr.responseText);
+                                    displaySearchResults(results, resultsDiv, query);
+                                } catch (e) {
+                                    resultsDiv.innerHTML = '';
+                                    resultsDiv.style.display = 'none';
+                                }
+                            }
+                        };
+                        xhr.send();
+                    }, 300);
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                        resultsDiv.style.display = 'none';
+                    }
+                });
+                
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        resultsDiv.style.display = 'none';
+                    }
+                });
+            }
+            
+            function displaySearchResults(results, container, query) {
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="live-search-item no-results">Không tìm thấy sản phẩm</div>';
+                    container.style.display = 'block';
+                    return;
+                }
+                
+                var html = '';
+                results.forEach(function(item) {
+                    html += '<a href="product.php?id=' + item.id + '" class="live-search-item">';
+                    html += '<div class="live-search-item-name">' + highlightText(item.name, query) + '</div>';
+                    html += '<div class="live-search-item-info">';
+                    html += '<span class="live-search-item-price">' + item.price + ' VNĐ</span>';
+                    if (item.category) {
+                        html += '<span class="live-search-item-category">' + item.category + '</span>';
+                    }
+                    html += '</div>';
+                    html += '</a>';
+                });
+                
+                container.innerHTML = html;
+                container.style.display = 'block';
+            }
+            
+            function highlightText(text, query) {
+                if (!query) return text;
+                var regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                return text.replace(regex, '<strong>$1</strong>');
+            }
+        })();
+        </script>
     </body>
 </html>

@@ -109,17 +109,21 @@ class SessionManager {
         
         $stmt = mysqli_prepare($con, $insert_query);
         if (!$stmt) {
-            error_log("Session insert prepare error: " . mysqli_error($con));
-            return false;
+            // Table might not exist - log but don't fail
+            error_log("Session insert prepare error: " . mysqli_error($con) . " - Continuing without database session tracking");
+            // Still return true because session variables are set
+            return true;
         }
         
         $session_id_hash = hash('sha256', $new_session_id);
         mysqli_stmt_bind_param($stmt, "siiisss", $session_id_hash, $user_id, $user_email, $role_id, $ip_address, $user_agent, $session_type);
         
         if (!mysqli_stmt_execute($stmt)) {
-            error_log("Session insert execute error: " . mysqli_stmt_error($stmt));
+            // Table might not exist - log but don't fail
+            error_log("Session insert execute error: " . mysqli_stmt_error($stmt) . " - Continuing without database session tracking");
             mysqli_stmt_close($stmt);
-            return false;
+            // Still return true because session variables are set
+            return true;
         }
         
         mysqli_stmt_close($stmt);
@@ -159,12 +163,11 @@ class SessionManager {
      */
     public static function validateSession($con, $check_ip = true) {
         // Check if session variables exist
-        if (!isset($_SESSION['id']) || !isset($_SESSION['session_id_hash'])) {
+        if (!isset($_SESSION['id']) || !isset($_SESSION['email'])) {
             return false;
         }
         
         $user_id = intval($_SESSION['id']);
-        $session_id_hash = $_SESSION['session_id_hash'];
         
         // Check session timeout
         if (isset($_SESSION['login_time'])) {
@@ -178,41 +181,63 @@ class SessionManager {
         // Update last activity
         $_SESSION['last_activity'] = time();
         
-        // Query database to verify session is active
-        $verify_query = "SELECT session_id FROM " . self::SESSION_TABLE . " 
-                        WHERE user_id = ? AND is_active = 1 AND session_id = ?";
-        
-        $stmt = mysqli_prepare($con, $verify_query);
-        if (!$stmt) {
-            return false;
-        }
-        
-        mysqli_stmt_bind_param($stmt, "is", $user_id, $session_id_hash);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        $is_valid = mysqli_num_rows($result) > 0;
-        mysqli_stmt_close($stmt);
-        
-        // Optional: Verify IP hasn't changed
-        if ($is_valid && $check_ip) {
-            $ip_query = "SELECT ip_address FROM " . self::SESSION_TABLE . " WHERE user_id = ? AND is_active = 1";
-            $stmt = mysqli_prepare($con, $ip_query);
-            mysqli_stmt_bind_param($stmt, "i", $user_id);
-            mysqli_stmt_execute($stmt);
-            $result = mysqli_stmt_get_result($stmt);
+        // Try to verify session in database (if table exists)
+        // If table doesn't exist, fall back to PHP session validation
+        if (isset($_SESSION['session_id_hash'])) {
+            $session_id_hash = $_SESSION['session_id_hash'];
             
-            if ($row = mysqli_fetch_array($result)) {
-                // If IP changed, session is compromised
-                if ($row['ip_address'] !== $_SERVER['REMOTE_ADDR']) {
-                    self::destroySession($con, $user_id);
+            // Check if sessions table exists
+            $check_table = "SHOW TABLES LIKE '" . self::SESSION_TABLE . "'";
+            $table_check = mysqli_query($con, $check_table);
+            
+            if ($table_check && mysqli_num_rows($table_check) > 0) {
+                // Table exists - verify in database
+                $verify_query = "SELECT session_id FROM " . self::SESSION_TABLE . " 
+                                WHERE user_id = ? AND is_active = 1 AND session_id = ?";
+                
+                $stmt = mysqli_prepare($con, $verify_query);
+                if ($stmt) {
+                    mysqli_stmt_bind_param($stmt, "is", $user_id, $session_id_hash);
+                    mysqli_stmt_execute($stmt);
+                    $result = mysqli_stmt_get_result($stmt);
+                    $is_valid = mysqli_num_rows($result) > 0;
                     mysqli_stmt_close($stmt);
-                    return false;
+                    
+                    if (!$is_valid) {
+                        return false;
+                    }
                 }
             }
-            mysqli_stmt_close($stmt);
         }
         
-        return $is_valid;
+        // If we get here, session is valid (either verified in DB or using PHP session fallback)
+        // Optional: Verify IP hasn't changed (only if sessions table exists)
+        if ($check_ip) {
+            $check_table = "SHOW TABLES LIKE '" . self::SESSION_TABLE . "'";
+            $table_check = mysqli_query($con, $check_table);
+            
+            if ($table_check && mysqli_num_rows($table_check) > 0) {
+                $ip_query = "SELECT ip_address FROM " . self::SESSION_TABLE . " WHERE user_id = ? AND is_active = 1";
+                $stmt = mysqli_prepare($con, $ip_query);
+                if ($stmt) {
+                    mysqli_stmt_bind_param($stmt, "i", $user_id);
+                    mysqli_stmt_execute($stmt);
+                    $result = mysqli_stmt_get_result($stmt);
+                    
+                    if ($row = mysqli_fetch_array($result)) {
+                        // If IP changed, session is compromised
+                        if ($row['ip_address'] !== $_SERVER['REMOTE_ADDR']) {
+                            self::destroySession($con, $user_id);
+                            mysqli_stmt_close($stmt);
+                            return false;
+                        }
+                    }
+                    mysqli_stmt_close($stmt);
+                }
+            }
+        }
+        
+        return true;
     }
     
     /**

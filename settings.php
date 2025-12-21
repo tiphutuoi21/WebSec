@@ -41,6 +41,83 @@
         <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
         <!-- External CSS -->
         <link rel="stylesheet" href="css/style.css" type="text/css">
+        <script type="text/javascript">
+            function validatePassword() {
+                var password = document.getElementById('newPassword').value;
+                var errorDiv = document.getElementById('password-error');
+                var errors = [];
+                
+                if (password.length === 0) {
+                    errorDiv.style.display = 'none';
+                    return;
+                }
+                
+                if (password.length < 8) {
+                    errors.push('Mật khẩu phải có tối thiểu 8 ký tự');
+                }
+                
+                if (!/[A-Z]/.test(password)) {
+                    errors.push('Thiếu chữ cái viết hoa (A-Z)');
+                }
+                
+                if (!/[a-z]/.test(password)) {
+                    errors.push('Thiếu chữ cái viết thường (a-z)');
+                }
+                
+                if (!/[0-9]/.test(password)) {
+                    errors.push('Thiếu số (0-9)');
+                }
+                
+                if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password)) {
+                    errors.push('Thiếu ký tự đặc biệt (!, @, #, $, %, v.v.)');
+                }
+                
+                if (errors.length > 0) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerHTML = '<strong>Lỗi:</strong> ' + errors.join(', ');
+                    errorDiv.style.color = '#DC143C';
+                } else {
+                    errorDiv.style.display = 'none';
+                }
+            }
+            
+            function validateRetype() {
+                var password = document.getElementById('newPassword').value;
+                var retype = document.getElementById('retypePassword').value;
+                var errorDiv = document.getElementById('retype-error');
+                
+                if (retype.length === 0) {
+                    errorDiv.style.display = 'none';
+                    return;
+                }
+                
+                if (password !== retype) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerHTML = '<strong>Lỗi:</strong> Mật khẩu nhập lại không khớp';
+                    errorDiv.style.color = '#DC143C';
+                } else {
+                    errorDiv.style.display = 'none';
+                }
+            }
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                var passwordInput = document.getElementById('newPassword');
+                var retypeInput = document.getElementById('retypePassword');
+                
+                if (passwordInput) {
+                    passwordInput.addEventListener('input', validatePassword);
+                    passwordInput.addEventListener('blur', validatePassword);
+                }
+                
+                if (retypeInput) {
+                    retypeInput.addEventListener('input', function() {
+                        validateRetype();
+                        validatePassword();
+                    });
+                    retypeInput.addEventListener('blur', validateRetype);
+                }
+            });
+        </script>
         <style>
             .settings-container {
                 margin-top: 30px;
@@ -129,22 +206,30 @@
             <br>
             <div class="container settings-container">
                 <div class="row">
-                    <div class="col-xs-4 col-xs-offset-4">
-                        <h1>Change Password</h1>
-                        <form method="post" action="setting_script.php">
-                            <div class="form-group">
-                                <input type="password" class="form-control" name="oldPassword" placeholder="Old Password">
+                    <div class="col-xs-12 col-sm-10 col-md-8 col-lg-6 col-xs-offset-0 col-sm-offset-1 col-md-offset-2 col-lg-offset-3">
+                        <div class="signup-container">
+                            <div class="signup-header">
+                                <h2><strong>ĐẶT LẠI MẬT KHẨU</strong></h2>
                             </div>
-                            <div class="form-group">
-                                <input type="password" class="form-control" name="newPassword" placeholder="New Password">
+                            <div class="signup-body">
+                                <form method="post" action="setting_script.php">
+                                    <div class="form-group">
+                                        <input type="password" class="form-control signup-input" name="oldPassword" id="oldPassword" placeholder="Mật khẩu cũ" required="true">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="password" class="form-control signup-input" name="newPassword" id="newPassword" placeholder="Mật khẩu mới" required="true">
+                                        <div id="password-error" style="margin-top: 8px; color: #DC143C; font-size: 13px; display: none;"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="password" class="form-control signup-input" name="retype" id="retypePassword" placeholder="Nhập lại mật khẩu mới" required="true">
+                                        <div id="retype-error" style="margin-top: 8px; color: #DC143C; font-size: 13px; display: none;"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="submit" class="btn btn-signup btn-block" value="Đổi Mật Khẩu">
+                                    </div>
+                                </form>
                             </div>
-                            <div class="form-group">
-                                <input type="password" class="form-control" name="retype" placeholder="Re-type new password">
-                            </div>
-                            <div class="form-group">
-                                <input type="submit" class="btn btn-primary" value="Change">
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,5 +330,7 @@
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

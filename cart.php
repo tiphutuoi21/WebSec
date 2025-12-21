@@ -19,11 +19,7 @@
     
     $sum = 0;
     if($no_of_user_products == 0){
-        ?>
-        <script>
-        window.alert("No items in the cart!!");
-        </script>
-    <?php
+        // Cart is empty - no alert needed, will show empty cart message
     } else {
         while($row = mysqli_fetch_array($user_products_result)){
             $item_total = $row['price'] * $row['quantity'];
@@ -54,45 +50,80 @@
             ?>
             <br>
             <div class="container">
-                <h2>Shopping Cart</h2>
-                <table class="table table-bordered table-striped">
-                    <tbody>
-                        <tr>
-                            <th>Item Number</th>
-                            <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                            <th>Action</th>
-                        </tr>
-                       <?php 
-                        $user_products_result = mysqli_query($con, $user_products_query) or die(mysqli_error($con));
-                        $no_of_user_products = mysqli_num_rows($user_products_result);
-                        $counter = 1;
-                        while($row = mysqli_fetch_array($user_products_result)){
-                            $item_total = $row['price'] * $row['quantity'];
-                         ?>
-                        <tr>
-                            <td><?php echo $counter ?></td>
-                            <td><?php echo $row['name']?></td>
-                            <td><?php echo $row['quantity']?></td>
-                            <td>Rs <?php echo $row['price']?></td>
-                            <td>Rs <?php echo $item_total?></td>
-                            <td><a href='cart_remove.php?id=<?php echo $row['id'] ?>' class="btn btn-sm btn-danger">Remove</a></td>
-                        </tr>
-                       <?php $counter = $counter + 1;
-                       }?>
-                        <tr>
-                            <td colspan="4" style="text-align: right;"><strong>Total Amount:</strong></td>
-                            <td><strong>Rs <?php echo number_format($sum, 2);?>/-</strong></td>
-                            <td>
-                                <?php if($no_of_user_products > 0): ?>
-                                    <a href="place_order.php" class="btn btn-success">Place Order</a>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="cart-header-section">
+                    <h1 class="cart-title">Giỏ Hàng Của Bạn</h1>
+                    <p class="cart-subtitle">Kiểm tra và thanh toán đơn hàng của bạn</p>
+                </div>
+                
+                <?php if($no_of_user_products == 0): ?>
+                    <div class="cart-empty">
+                        <div class="cart-empty-icon">
+                            <span class="glyphicon glyphicon-shopping-cart" style="font-size: 80px; color: var(--dark-gray);"></span>
+                        </div>
+                        <h3>Giỏ hàng của bạn đang trống</h3>
+                        <p>Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm!</p>
+                        <a href="products.php" class="btn btn-product-buy" style="display: inline-block; width: auto; padding: 12px 40px; margin-top: 20px;">
+                            <span class="glyphicon glyphicon-th"></span> Tiếp Tục Mua Sắm
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <div class="cart-table-wrapper">
+                        <table class="table cart-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Tên Sản Phẩm</th>
+                                    <th>Số Lượng</th>
+                                    <th>Đơn Giá</th>
+                                    <th>Thành Tiền</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                               <?php 
+                                $user_products_result = mysqli_query($con, $user_products_query) or die(mysqli_error($con));
+                                $no_of_user_products = mysqli_num_rows($user_products_result);
+                                $counter = 1;
+                                while($row = mysqli_fetch_array($user_products_result)){
+                                    $item_total = $row['price'] * $row['quantity'];
+                                 ?>
+                                <tr>
+                                    <td><?php echo $counter ?></td>
+                                    <td><strong><?php echo htmlspecialchars($row['name'])?></strong></td>
+                                    <td><?php echo $row['quantity']?></td>
+                                    <td><?php echo number_format($row['price'], 0, ',', '.'); ?> VNĐ</td>
+                                    <td><strong><?php echo number_format($item_total, 0, ',', '.'); ?> VNĐ</strong></td>
+                                    <td>
+                                        <a href='cart_remove.php?id=<?php echo $row['id'] ?>' class="btn btn-cart-remove">
+                                            <span class="glyphicon glyphicon-trash"></span> Xóa
+                                        </a>
+                                    </td>
+                                </tr>
+                               <?php $counter = $counter + 1;
+                               }?>
+                                <tr class="cart-total-row">
+                                    <td colspan="4" style="text-align: right;">
+                                        <strong style="font-size: 20px;">Tổng Cộng:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <strong style="font-size: 24px; color: var(--primary-red);">
+                                            <?php echo number_format($sum, 0, ',', '.'); ?> VNĐ
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="cart-actions">
+                            <a href="products.php" class="btn btn-cart-continue">
+                                <span class="glyphicon glyphicon-arrow-left"></span> Tiếp Tục Mua Sắm
+                            </a>
+                            <a href="place_order.php" class="btn btn-cart-checkout">
+                                <span class="glyphicon glyphicon-ok"></span> Đặt Hàng Ngay
+                            </a>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
             <br><br><br><br><br><br><br><br><br><br>
             <footer class="footer">

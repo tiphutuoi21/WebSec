@@ -24,46 +24,48 @@
         <script type="text/javascript">
             function validatePassword() {
                 var password = document.getElementById('password').value;
-                var strengthDiv = document.getElementById('password-strength');
-                var requirements = [];
+                var errorDiv = document.getElementById('password-error');
+                var errors = [];
+                
+                if (password.length === 0) {
+                    errorDiv.style.display = 'none';
+                    return;
+                }
                 
                 if (password.length < 8) {
-                    requirements.push('<span style="color: red;">✗ Tối thiểu 8 ký tự</span>');
-                } else {
-                    requirements.push('<span style="color: green;">✓ Tối thiểu 8 ký tự</span>');
+                    errors.push('Mật khẩu phải có tối thiểu 8 ký tự');
                 }
                 
                 if (!/[A-Z]/.test(password)) {
-                    requirements.push('<span style="color: red;">✗ Có chữ hoa (A-Z)</span>');
-                } else {
-                    requirements.push('<span style="color: green;">✓ Có chữ hoa (A-Z)</span>');
+                    errors.push('Thiếu chữ cái viết hoa (A-Z)');
                 }
                 
                 if (!/[a-z]/.test(password)) {
-                    requirements.push('<span style="color: red;">✗ Có chữ thường (a-z)</span>');
-                } else {
-                    requirements.push('<span style="color: green;">✓ Có chữ thường (a-z)</span>');
+                    errors.push('Thiếu chữ cái viết thường (a-z)');
                 }
                 
                 if (!/[0-9]/.test(password)) {
-                    requirements.push('<span style="color: red;">✗ Có số (0-9)</span>');
-                } else {
-                    requirements.push('<span style="color: green;">✓ Có số (0-9)</span>');
+                    errors.push('Thiếu số (0-9)');
                 }
                 
                 if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password)) {
-                    requirements.push('<span style="color: red;">✗ Có ký tự đặc biệt</span>');
-                } else {
-                    requirements.push('<span style="color: green;">✓ Có ký tự đặc biệt</span>');
+                    errors.push('Thiếu ký tự đặc biệt (!, @, #, $, %, v.v.)');
                 }
                 
-                strengthDiv.innerHTML = requirements.join('<br>');
+                if (errors.length > 0) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerHTML = '<strong>Lỗi:</strong> ' + errors.join(', ');
+                    errorDiv.style.color = '#DC143C';
+                } else {
+                    errorDiv.style.display = 'none';
+                }
             }
             
             document.addEventListener('DOMContentLoaded', function() {
                 var passwordInput = document.getElementById('password');
                 if (passwordInput) {
                     passwordInput.addEventListener('input', validatePassword);
+                    passwordInput.addEventListener('blur', validatePassword);
                 }
             });
         </script>
@@ -91,11 +93,8 @@
                                         <input type="email" class="form-control signup-input" name="email" placeholder="Email" required="true" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$">
                                     </div> 
                                     <div class="form-group">
-                                        <input type="password" class="form-control signup-input" name="password" id="password" placeholder="Mật khẩu (tối thiểu 8 ký tự: A-Z, a-z, 0-9, ký tự đặc biệt)" required="true" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\':\"\\|,.<>\/?]).{8,}$" minlength="8">
-                                        <small class="password-requirements" style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
-                                            <strong>Yêu cầu:</strong> Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt. Không chứa thông tin cá nhân.
-                                        </small>
-                                        <div id="password-strength" style="margin-top: 8px;"></div>
+                                        <input type="password" class="form-control signup-input" name="password" id="password" placeholder="Mật khẩu" required="true">
+                                        <div id="password-error" style="margin-top: 8px; color: #DC143C; font-size: 13px; display: none;"></div>
                                     </div>
                                     <div class="form-group"> 
                                         <input type="tel" class="form-control signup-input" name="contact" placeholder="Số điện thoại" required="true">
@@ -129,5 +128,7 @@
            </footer>
 
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

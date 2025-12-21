@@ -63,5 +63,7 @@
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

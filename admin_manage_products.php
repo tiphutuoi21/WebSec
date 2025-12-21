@@ -25,20 +25,24 @@
     </head>
     <body>
         <div class="container">
-            <div style="background-color: #222; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                <h3 style="color: white; display: inline;">Admin Dashboard (<?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'])); ?>)</h3>
-                <a href="admin_dashboard.php" style="color: white; margin-right: 20px;">Dashboard</a>
-                <a href="admin_manage_users.php" style="color: white; margin-right: 20px;">Manage Users</a>
-                <a href="admin_manage_orders.php" style="color: white; margin-right: 20px;">Manage Orders</a>
-                <a href="admin_logout.php" style="color: white; float: right;">Logout</a>
+            <div class="admin-nav">
+                <h3>Admin Dashboard (<?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'])); ?>)</h3>
+                <a href="admin_dashboard.php">Dashboard</a>
+                <a href="admin_manage_users.php">Manage Users</a>
+                <a href="admin_manage_products.php">Manage Products</a>
+                <?php if(intval($_SESSION['admin_role_id']) === 1): ?>
+                    <a href="admin_manage_sales.php">Manage Sales</a>
+                <?php endif; ?>
+                <a href="admin_logout.php">Logout</a>
             </div>
             
             <div class="row">
                 <div class="col-md-12">
-                    <h2>Manage Products</h2>
-                    <a href="admin_add_product.php" class="btn btn-primary" style="margin-bottom: 15px;">Add New Product</a>
+                    <h2 class="admin-page-title">Quản Lý Sản Phẩm</h2>
+                    <a href="admin_add_product.php" class="admin-btn-primary">Thêm Sản Phẩm Mới</a>
                     
-                    <table class="table table-bordered table-striped">
+                    <div class="admin-table">
+                        <table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -53,18 +57,19 @@
                                     ?>
                                     <tr>
                                         <td><?php echo $row['id']; ?></td>
-                                        <td><?php echo $row['name']; ?></td>
-                                        <td>Rs <?php echo $row['price']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['name']); ?></td>
+                                        <td><?php echo number_format($row['price'], 0, ',', '.'); ?> VNĐ</td>
                                         <td>
-                                            <a href="admin_edit_product.php?id=<?php echo $row['id']; ?>" class="btn btn-warning btn-sm">Edit</a>
-                                            <a href="admin_delete_product.php?id=<?php echo $row['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
+                                            <a href="admin_edit_product.php?id=<?php echo $row['id']; ?>" class="admin-btn-warning btn-sm">Sửa</a>
+                                            <a href="admin_delete_product.php?id=<?php echo $row['id']; ?>" class="admin-btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">Xóa</a>
                                         </td>
                                     </tr>
                                     <?php
                                 }
                             ?>
                         </tbody>
-                    </table>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
