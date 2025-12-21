@@ -54,7 +54,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
+        <link rel="shortcut icon" href="img/avatar.png" />
         <title>Order Confirmation - Lifestyle Store</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">

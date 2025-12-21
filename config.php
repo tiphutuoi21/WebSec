@@ -19,7 +19,7 @@ if (!defined('GMAIL_PASSWORD')) {
     define('GMAIL_PASSWORD', $_ENV['GMAIL_PASSWORD'] ?? '');
 }
 if (!defined('GMAIL_FROM_NAME')) {
-    define('GMAIL_FROM_NAME', $_ENV['GMAIL_FROM_NAME'] ?? 'Lifestyle Store');
+    define('GMAIL_FROM_NAME', $_ENV['GMAIL_FROM_NAME'] ?? 'Figure Shop');
 }
 if (!defined('SITE_URL')) {
     define('SITE_URL', $_ENV['SITE_URL'] ?? 'http://localhost/LifestyleStore');

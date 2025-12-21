@@ -26,12 +26,19 @@
         exit();
     }
     
-    // Validate password strength
-    $password_check = SecurityHelper::isStrongPassword($password);
+    // Validate password strength with user data
+    $userData = [
+        'name' => $name,
+        'email' => $email,
+        'contact' => $contact,
+        'city' => $city,
+        'address' => $address
+    ];
+    $password_check = SecurityHelper::isStrongPassword($password, $userData);
     if (!$password_check['valid']) {
         echo htmlspecialchars($password_check['message']) . " Redirecting you back to registration page...";
         ?>
-        <meta http-equiv="refresh" content="2;url=signup.php" />
+        <meta http-equiv="refresh" content="3;url=signup.php" />
         <?php
         exit();
     }

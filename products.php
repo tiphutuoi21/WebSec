@@ -7,12 +7,52 @@
     if (isset($_SESSION['id'])) {
         SecurityHelper::validateSessionTimeout($con);
     }
+    
+    // Get category filter
+    $category_filter = isset($_GET['category']) ? $_GET['category'] : 'all';
+    $page_title = 'Tất Cả Sản Phẩm';
+    $page_description = 'Bộ sưu tập mô hình đầy đủ nhất';
+    
+    // Build query based on category
+    if ($category_filter == 'new') {
+        // Products created in last 30 days
+        $query = "SELECT * FROM items WHERE is_active = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY created_at DESC";
+        $page_title = 'Hàng Mới Về';
+        $page_description = 'Những mô hình mới nhất vừa về kho';
+    } elseif ($category_filter == 'bestseller') {
+        // Bestseller - products with most orders
+        $query = "SELECT i.*, COALESCE(SUM(oi.quantity), 0) as total_sold 
+                  FROM items i 
+                  LEFT JOIN order_items oi ON i.id = oi.item_id 
+                  WHERE i.is_active = 1 
+                  GROUP BY i.id 
+                  ORDER BY total_sold DESC, i.created_at DESC 
+                  LIMIT 50";
+        $page_title = 'Best Seller';
+        $page_description = 'Sản phẩm bán chạy nhất';
+    } elseif ($category_filter == 'preorder') {
+        // Products with category = 'Preorder' or 'Order'
+        $query = "SELECT * FROM items WHERE is_active = 1 AND (category LIKE '%Order%' OR category LIKE '%Preorder%' OR category LIKE '%Pre-order%') ORDER BY name ASC";
+        $page_title = 'Hàng Order';
+        $page_description = 'Đặt trước các mô hình độc quyền';
+    } else {
+        // All products
+        $query = "SELECT * FROM items WHERE is_active = 1 ORDER BY created_at DESC";
+        $page_title = 'Tất Cả Sản Phẩm';
+        $page_description = 'Bộ sưu tập mô hình đầy đủ nhất';
+    }
+    
+    $result = mysqli_query($con, $query) or die(mysqli_error($con));
+    $products = array();
+    while ($row = mysqli_fetch_assoc($result)) {
+        $products[] = $row;
+    }
 ?>
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
-        <title>Lifestyle Store</title>
+        <link rel="shortcut icon" href="img/avatar.png" />
+        <title><?php echo htmlspecialchars($page_title); ?> - Figure Shop</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- latest compiled and minified CSS -->
@@ -31,8 +71,8 @@
             ?>
             <div class="container">
                 <div class="jumbotron">
-                    <h1>Welcome to our LifeStyle Store!</h1>
-                    <p>We have the best cameras, watches and shirts for you. No need to hunt around, we have all in one place.</p>
+                    <h1><?php echo htmlspecialchars($page_title); ?></h1>
+                    <p><?php echo htmlspecialchars($page_description); ?></p>
                     
                     <!-- Search Bar in Jumbotron -->
                     <hr>
@@ -40,14 +80,14 @@
                         <div class="input-group" style="margin-bottom: 10px;">
                             <input type="text" 
                                    class="form-control" 
-                                   placeholder="Search for cameras, watches, shirts..." 
+                                   placeholder="Tìm kiếm mô hình..." 
                                    name="search"
                                    maxlength="255"
                                    style="font-size: 16px; padding: 10px;"
                                    required>
                             <span class="input-group-btn">
-                                <button class="btn btn-primary" type="submit" style="padding: 10px 20px; font-size: 16px;">
-                                    <span class="glyphicon glyphicon-search"></span> Search
+                                <button class="btn btn-warning" type="submit" style="padding: 10px 20px; font-size: 16px;">
+                                    <span class="glyphicon glyphicon-search"></span> Tìm Kiếm
                                 </button>
                             </span>
                         </div>
@@ -55,356 +95,69 @@
                 </div>
             </div>
             <div class="container">
-                <div class="row">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=1">
-                                <img src="img/cannon_eos.jpg" alt="Cannon">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Cannon EOS</h3>
-                                    <p>Price: Rs. 36000.00</p>
-                                    <a href="product.php?id=1" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(1)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=1" class="btn btn-block btn-primary" name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
+                <?php if (count($products) > 0): ?>
+                    <div class="row">
+                        <?php 
+                        $col_count = 0;
+                        foreach ($products as $product): 
+                            $col_count++;
+                            if ($col_count > 4) {
+                                echo '</div><div class="row">';
+                                $col_count = 1;
+                            }
+                        ?>
+                            <div class="col-md-3 col-sm-6">
+                                <div class="thumbnail">
+                                    <a href="product.php?id=<?php echo $product['id']; ?>">
+                                        <?php 
+                                        // Try to get image, fallback to default
+                                        $image_path = 'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.jpg';
+                                        if (!file_exists($image_path)) {
+                                            // Use first available image as fallback
+                                            $image_path = 'img/camera.jpg';
                                         }
                                         ?>
-                                    
+                                        <img src="<?php echo htmlspecialchars($image_path); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" style="height: 200px; object-fit: cover; width: 100%;">
+                                    </a>
+                                    <center>
+                                        <div class="caption">
+                                            <h3><?php echo htmlspecialchars($product['name']); ?></h3>
+                                            <p>Giá: <?php echo number_format($product['price'], 0, ',', '.'); ?> VNĐ</p>
+                                            <?php if (!empty($product['stock_quantity'])): ?>
+                                                <p><small>Còn lại: <?php echo $product['stock_quantity']; ?> sản phẩm</small></p>
+                                            <?php endif; ?>
+                                            <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-info btn-block">Xem Chi Tiết</a>
+                                            <?php if(!isset($_SESSION['email'])): ?>
+                                                <p><a href="login.php" role="button" class="btn btn-primary btn-block">Mua Ngay</a></p>
+                                            <?php else:
+                                                if(check_if_added_to_cart($product['id'])):
+                                                    echo '<a href="#" class="btn btn-block btn-success disabled">Đã thêm vào giỏ</a>';
+                                                else:
+                                            ?>
+                                                <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-block btn-primary" name="add" value="add">Thêm vào giỏ</a>
+                                            <?php 
+                                                endif;
+                                            endif; ?>
+                                        </div>
+                                    </center>
                                 </div>
-                            </center>
-                        </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=2">
-                                <img src="img/sony_dslr.jpeg" alt="Sony DSLR">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Sony DSLR</h3>
-                                    <p>Price: Rs. 40000.00</p>
-                                    <a href="product.php?id=2" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(2)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=2" class="btn btn-block btn-primary" name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
+                <?php else: ?>
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <h4>Không có sản phẩm nào</h4>
+                        <p>Hiện tại không có sản phẩm nào trong danh mục này. Vui lòng quay lại sau!</p>
+                        <a href="products.php" class="btn btn-danger">Xem Tất Cả Sản Phẩm</a>
                     </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=3">
-                                <img src="img/sony_dslr2.jpeg" alt="Sony DSLR">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Sony DSLR</h3>
-                                    <p>Price: Rs. 50000.00</p>
-                                    <a href="product.php?id=3" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(3)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=3" class="btn btn-block btn-primary" name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=4">
-                                <img src="img/olympus.jpg" alt="Olympus">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Olympus DSLR</h3>
-                                    <p>Price: Rs. 80000.00</p>
-                                    <a href="product.php?id=4" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(4)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=4" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=5">
-                                <img src="img/titan301.jpg" alt="Titan 301">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Titan Model #301</h3>
-                                    <p>Price: Rs. 13000.00</p>
-                                    <a href="product.php?id=5" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(5)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=5" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=6">
-                                <img src="img/titan201.jpg" alt="Titan 201">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Titan Model #201</h3>
-                                    <p>Price: Rs. 3000.00</p>
-                                    <a href="product.php?id=6" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(6)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=6" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=7">
-                                <img src="img/hmt.JPG" alt="htm milan">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>HMT Milan</h3>
-                                    <p>Price: Rs. 8000.00</p>
-                                    <a href="product.php?id=7" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(7)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=7" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=8">
-                                <img src="img/favreleuba.jpg" alt="Favre Leuba">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Favre Leuba #111</h3>
-                                    <p>Price: Rs. 18000.00</p>
-                                    <a href="product.php?id=8" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(8)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=8" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=9">
-                                <img src="img/raymond.jpg" alt="Raymond shirt">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Raymond</h3>
-                                    <p>Price: Rs. 1500.00</p>
-                                    <a href="product.php?id=9" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(9)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=9" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=10">
-                                <img src="img/charles.jpg" alt="Charles shirt">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>Charles</h3>
-                                    <p>Price: Rs. 1000.00</p>
-                                    <a href="product.php?id=10" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(10)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=10" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=11">
-                                <img src="img/HXR.jpg" alt="HXR">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>HXR</h3>
-                                    <p>Price: Rs. 900.00</p>
-                                    <a href="product.php?id=11" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(11)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=11" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                    <div class="col-md-3 col-sm-6">
-                        <div class="thumbnail">
-                            <a href="product.php?id=12">
-                                <img src="img/pink.jpg" alt="PINK">
-                            </a>
-                            <center>
-                                <div class="caption">
-                                    <h3>PINK</h3>
-                                    <p>Price: Rs. 1200.00</p>
-                                    <a href="product.php?id=12" class="btn btn-info btn-block">View Details</a>
-                                    <?php if(!isset($_SESSION['email'])){  ?>
-                                        <p><a href="login.php" role="button" class="btn btn-primary btn-block">Buy Now</a></p>
-                                        <?php
-                                        }
-                                        else{
-                                            if(check_if_added_to_cart(12)){
-                                                echo '<a href="#" class=btn btn-block btn-success disabled>Added to cart</a>';
-                                            }else{
-                                                ?>
-                                                <a href="product.php?id=12" class="btn btn-block btn-primary " name="add" value="add" class="btn btn-block btr-primary">Add to cart</a>
-                                                <?php
-                                            }
-                                        }
-                                        ?>
-                                </div>
-                            </center>
-                        </div>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
             <br><br><br><br><br><br><br><br>
            <footer class="footer">
                <div class="container">
                <center>
-                   <p>Copyright &copy Lifestyle Store. All Rights Reserved. | Contact Us: +91 90000 00000</p>
-                   <p>This website is developed by Sajal Agrawal</p>
+                   <p>Copyright &copy Figure Shop. All Rights Reserved. | Liên Hệ: +84 90000 00000</p>
+                   <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
                </center>
                </div>
            </footer>

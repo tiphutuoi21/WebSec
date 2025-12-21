@@ -29,8 +29,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
-        <title>Lifestyle Store</title>
+        <link rel="shortcut icon" href="img/avatar.png" />
+        <title>Cài Đặt - Figure Shop</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- latest compiled and minified CSS -->
@@ -239,8 +239,8 @@
            <footer class="footer">
                <div class="container">
                <center>
-                   <p>Copyright &copy Lifestyle Store. All Rights Reserved. | Contact Us: +91 90000 00000</p>
-                   <p>This website is developed by Sajal Agrawal</p>
+                   <p>Copyright &copy Figure Shop. All Rights Reserved. | Liên Hệ: +84 0854008327</p>
+                   <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
                </center>
                </div>
            </footer>

@@ -20,10 +20,9 @@
         exit();
     }
     
-    // Validate password length
-    $password_check = SecurityHelper::isStrongPassword($password);
-    if (!$password_check['valid']) {
-        echo htmlspecialchars($password_check['message']) . " Redirecting you back to login page...";
+    // Validate password is not empty (no strength check needed for login)
+    if (empty($password)) {
+        echo "Password cannot be empty. Redirecting you back to login page...";
         ?>
         <meta http-equiv="refresh" content="2;url=login.php" />
         <?php
