@@ -47,8 +47,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
-        <title>Search Products - Lifestyle Store</title>
+        <link rel="shortcut icon" href="img/avatar.png" />
+        <title>Tìm Kiếm Sản Phẩm - Figure Shop</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- latest compiled and minified CSS -->
@@ -62,40 +62,99 @@
         <style>
             .search-container {
                 margin: 30px 0;
-                padding: 20px;
-                background-color: #f9f9f9;
-                border-radius: 8px;
+                padding: 30px;
+                background: linear-gradient(135deg, var(--primary-black) 0%, var(--dark-gray) 50%, var(--primary-red) 100%);
+                border-radius: 12px;
+                border: 3px solid var(--primary-yellow);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
             }
+            
             .search-form {
                 display: flex;
                 gap: 10px;
+                max-width: 700px;
+                margin: 0 auto;
             }
+            
             .search-form input {
                 flex: 1;
-                padding: 10px 15px;
+                padding: 14px 20px;
                 font-size: 16px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                border: 2px solid var(--primary-yellow);
+                border-radius: 8px 0 0 8px;
+                background: rgba(255, 255, 255, 0.95);
             }
+            
+            .search-form input:focus {
+                border-color: var(--primary-yellow);
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                background: #fff;
+                outline: none;
+            }
+            
             .search-form button {
-                padding: 10px 30px;
+                padding: 14px 30px;
                 font-size: 16px;
+                background: var(--primary-yellow);
+                color: var(--primary-black);
+                border: 2px solid var(--primary-yellow);
+                border-radius: 0 8px 8px 0;
+                font-weight: bold;
+                transition: all 0.3s ease;
             }
+            
+            .search-form button:hover {
+                background: var(--dark-yellow);
+                border-color: var(--dark-yellow);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4);
+            }
+            
             .search-results-header {
-                margin-top: 30px;
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                border-bottom: 2px solid #ddd;
+                margin-top: 40px;
+                margin-bottom: 30px;
+                padding: 20px;
+                background: linear-gradient(135deg, var(--primary-black) 0%, var(--dark-gray) 100%);
+                border-radius: 10px;
+                border-left: 5px solid var(--primary-yellow);
             }
-            .no-results {
-                padding: 40px 20px;
-                text-align: center;
-                color: #999;
+            
+            .search-results-header h2 {
+                color: var(--primary-yellow);
+                margin: 0;
+                font-weight: 900;
             }
+            
             .search-info {
-                color: #666;
-                font-size: 14px;
+                color: #fff;
+                font-size: 16px;
                 margin-top: 10px;
+                opacity: 0.9;
+            }
+            
+            .no-results {
+                padding: 60px 20px;
+                text-align: center;
+                background: #f8f8f8;
+                border-radius: 12px;
+                border: 2px solid var(--dark-gray);
+            }
+            
+            .no-results-icon {
+                font-size: 80px;
+                color: var(--dark-gray);
+                margin-bottom: 20px;
+            }
+            
+            .no-results h3 {
+                color: var(--primary-black);
+                margin-bottom: 15px;
+            }
+            
+            .no-results p {
+                color: var(--dark-gray);
+                font-size: 16px;
+                margin-bottom: 25px;
             }
         </style>
     </head>
@@ -105,30 +164,25 @@
             
             <div class="container">
                 <div class="search-container">
-                    <h2>Search Products</h2>
+                    <h2 style="color: var(--primary-yellow); text-align: center; margin-bottom: 25px; font-weight: 900; font-size: 32px;">Tìm Kiếm Sản Phẩm</h2>
                     <form method="POST" action="search.php" class="search-form">
                         <input type="text" 
                                name="search" 
-                               placeholder="Search by product name (cameras, watches, shirts...)" 
+                               placeholder="Tìm kiếm mô hình..." 
                                value="<?php echo htmlspecialchars($search_query, ENT_QUOTES, 'UTF-8'); ?>" 
                                maxlength="255"
                                required>
                         <button type="submit" class="btn btn-primary">
-                            <span class="glyphicon glyphicon-search"></span> Search
+                            <span class="glyphicon glyphicon-search"></span> Tìm Kiếm
                         </button>
-                        <?php if (!empty($search_query)): ?>
-                            <a href="products.php" class="btn btn-default">
-                                <span class="glyphicon glyphicon-remove"></span> Clear
-                            </a>
-                        <?php endif; ?>
                     </form>
                     <?php if (!empty($search_query)): ?>
-                        <p class="search-info">
+                        <p class="search-info" style="text-align: center; margin-top: 20px;">
                             <?php 
                             if ($no_results) {
-                                echo 'No results found for: <strong>' . htmlspecialchars($search_query, ENT_QUOTES, 'UTF-8') . '</strong>';
+                                echo 'Không tìm thấy kết quả cho: <strong>' . htmlspecialchars($search_query, ENT_QUOTES, 'UTF-8') . '</strong>';
                             } else {
-                                echo 'Found <strong>' . count($search_results) . '</strong> product(s) matching: <strong>' . htmlspecialchars($search_query, ENT_QUOTES, 'UTF-8') . '</strong>';
+                                echo 'Tìm thấy <strong>' . count($search_results) . '</strong> sản phẩm cho: <strong>' . htmlspecialchars($search_query, ENT_QUOTES, 'UTF-8') . '</strong>';
                             }
                             ?>
                         </p>
@@ -137,17 +191,20 @@
                 
                 <?php if ($no_results): ?>
                     <div class="no-results">
-                        <h4>No Products Found</h4>
-                        <p>Sorry, we couldn't find any products matching your search.</p>
+                        <div class="no-results-icon">
+                            <span class="glyphicon glyphicon-search"></span>
+                        </div>
+                        <h3>Không Tìm Thấy Sản Phẩm</h3>
+                        <p>Xin lỗi, chúng tôi không tìm thấy sản phẩm nào phù hợp với từ khóa của bạn.</p>
                         <p>
-                            <a href="products.php" class="btn btn-primary">
-                                <span class="glyphicon glyphicon-arrow-left"></span> Back to All Products
+                            <a href="products.php" class="btn btn-product-buy" style="display: inline-block; width: auto; padding: 12px 40px;">
+                                <span class="glyphicon glyphicon-arrow-left"></span> Xem Tất Cả Sản Phẩm
                             </a>
                         </p>
                     </div>
                 <?php elseif (!empty($search_results)): ?>
                     <div class="search-results-header">
-                        <h3>Search Results (<?php echo count($search_results); ?> product<?php echo count($search_results) != 1 ? 's' : ''; ?>)</h3>
+                        <h2>Kết Quả Tìm Kiếm (<?php echo count($search_results); ?> sản phẩm)</h2>
                     </div>
                     
                     <div class="row">
@@ -171,38 +228,43 @@
                                 $image_path = isset($product_images[$product['name']]) ? $product_images[$product['name']] : 'img/default_product.jpg';
                             ?>
                             <div class="col-md-3 col-sm-6">
-                                <div class="thumbnail">
-                                    <a href="product.php?id=<?php echo intval($product['id']); ?>">
-                                        <img src="<?php echo htmlspecialchars($image_path); ?>" 
-                                             alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                             onerror="this.src='img/default_product.jpg'">
-                                    </a>
-                                    <center>
-                                        <div class="caption">
-                                            <h4><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h4>
-                                            <p><strong>Price: Rs. <?php echo number_format($product['price'], 2); ?></strong></p>
-                                            
-                                            <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-info btn-block">
-                                                View Details
-                                            </a>
-                                            
-                                            <?php if(!isset($_SESSION['email'])): ?>
-                                                <a href="login.php" class="btn btn-primary btn-block" style="margin-top: 5px;">
-                                                    Buy Now
-                                                </a>
-                                            <?php else: ?>
-                                                <?php if(check_if_added_to_cart($product['id'])): ?>
-                                                    <a href="#" class="btn btn-success btn-block" style="margin-top: 5px;" disabled>
-                                                        ✓ Added to cart
-                                                    </a>
-                                                <?php else: ?>
-                                                    <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-primary btn-block" style="margin-top: 5px;">
-                                                        Add to cart
-                                                    </a>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
+                                <div class="product-card">
+                                    <div class="product-image-container">
+                                        <a href="product.php?id=<?php echo intval($product['id']); ?>">
+                                            <img src="<?php echo htmlspecialchars($image_path); ?>" 
+                                                 alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                 class="product-card-image"
+                                                 onerror="this.src='img/camera.jpg'">
+                                        </a>
+                                        <?php if (!empty($product['stock_quantity']) && $product['stock_quantity'] < 5): ?>
+                                            <span class="product-badge product-badge-low">Sắp hết</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="product-card-body">
+                                        <h3 class="product-card-title"><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                        <div class="product-card-price">
+                                            <?php echo number_format($product['price'], 0, ',', '.'); ?> VNĐ
                                         </div>
-                                    </center>
+                                        <?php if (!empty($product['stock_quantity'])): ?>
+                                            <div class="product-card-stock">
+                                                <span class="glyphicon glyphicon-check"></span> Còn lại: <?php echo $product['stock_quantity']; ?> sản phẩm
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="product-card-actions">
+                                            <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-product-detail">Xem Chi Tiết</a>
+                                            <?php if(!isset($_SESSION['email'])): ?>
+                                                <a href="login.php" class="btn btn-product-buy">Mua Ngay</a>
+                                            <?php else:
+                                                if(check_if_added_to_cart($product['id'])):
+                                                    echo '<a href="cart.php" class="btn btn-product-added disabled">Đã thêm vào giỏ</a>';
+                                                else:
+                                            ?>
+                                                <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-product-add">Thêm vào giỏ</a>
+                                            <?php 
+                                                endif;
+                                            endif; ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -214,8 +276,8 @@
             <footer class="footer">
                 <div class="container">
                     <center>
-                        <p>Copyright &copy Lifestyle Store. All Rights Reserved. | Contact Us: +91 90000 00000</p>
-                        <p>This website is developed by Sajal Agrawal</p>
+                        <p>Copyright &copy Figure Shop. All Rights Reserved. | Liên Hệ: + 84 0854008327</p>
+                        <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
                     </center>
                 </div>
             </footer>

@@ -1,23 +1,45 @@
 <?php
 require __DIR__ . '/config.php';
-require __DIR__ . '/vendor/autoload.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+// Check if PHPMailer is available via Composer
+$vendor_autoload = __DIR__ . '/vendor/autoload.php';
+$phpmailer_available = false;
+
+if (file_exists($vendor_autoload)) {
+    require $vendor_autoload;
+    // Check if PHPMailer classes exist
+    if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        $phpmailer_available = true;
+    }
+}
 
 class MailHelper {
     
     public static function sendVerificationEmail($email, $name, $token) {
-        $mail = new PHPMailer(true);
+        // Check if PHPMailer is available
+        global $phpmailer_available;
+        if (!isset($phpmailer_available) || !$phpmailer_available) {
+            // PHPMailer not available - log and return false
+            error_log("PHPMailer not available - email verification skipped for: $email");
+            return false;
+        }
+        
+        // Check if class exists before using it
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            error_log("PHPMailer class not found - email verification skipped for: $email");
+            return false;
+        }
         
         try {
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            
             // Server settings
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
             $mail->Username = GMAIL_EMAIL;
             $mail->Password = GMAIL_PASSWORD;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->SMTPOptions = array(
                 'ssl' => array(
@@ -34,7 +56,7 @@ class MailHelper {
             
             // Content
             $mail->isHTML(true);
-            $mail->Subject = 'Email Verification - Lifestyle Store';
+            $mail->Subject = 'Email Verification - Figure Shop';
             
             $verification_link = SITE_URL . '/verify_email.php?token=' . urlencode($token);
             
@@ -44,22 +66,36 @@ class MailHelper {
             $mail->send();
             return true;
             
-        } catch (Exception $e) {
-            error_log("PHPMailer Error: " . $mail->ErrorInfo);
+        } catch (\Exception $e) {
+            error_log("PHPMailer Error: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
             return false;
         }
     }
     
     public static function sendWelcomeEmail($email, $name) {
-        $mail = new PHPMailer(true);
+        // Check if PHPMailer is available
+        global $phpmailer_available;
+        if (!isset($phpmailer_available) || !$phpmailer_available) {
+            // PHPMailer not available - log and return false
+            error_log("PHPMailer not available - welcome email skipped for: $email");
+            return false;
+        }
+        
+        // Check if class exists before using it
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            error_log("PHPMailer class not found - welcome email skipped for: $email");
+            return false;
+        }
         
         try {
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
             $mail->Username = GMAIL_EMAIL;
             $mail->Password = GMAIL_PASSWORD;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->SMTPOptions = array(
                 'ssl' => array(
@@ -73,14 +109,14 @@ class MailHelper {
             $mail->addAddress($email, $name);
             $mail->addReplyTo(GMAIL_EMAIL, GMAIL_FROM_NAME);
             $mail->isHTML(true);
-            $mail->Subject = 'Welcome to Lifestyle Store!';
+            $mail->Subject = 'Welcome to Figure Shop!';
             $mail->Body = "
                 <html>
                 <head>
                     <style>
                         body { font-family: Arial, sans-serif; color: #333; }
                         .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-                        .header { background-color: #337ab7; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                        .header { background-color: #dc143c; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
                         .content { padding: 20px; background-color: white; }
                         .footer { background-color: #f9f9f9; padding: 10px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; }
                     </style>
@@ -88,29 +124,29 @@ class MailHelper {
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>Lifestyle Store</h1>
+                            <h1>Figure Shop</h1>
                         </div>
                         <div class='content'>
                             <h2>Welcome, " . htmlspecialchars($name) . "!</h2>
-                            <p>Thank you for registering with Lifestyle Store.</p>
+                            <p>Thank you for registering with Figure Shop.</p>
                             <p>Your account has been successfully created and verified.</p>
                             <p>You can now login and start shopping for amazing products.</p>
-                            <p>Best regards,<br/>Lifestyle Store Team</p>
+                            <p>Best regards,<br/>Figure Shop Team</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; Lifestyle Store. All Rights Reserved.</p>
+                            <p>&copy; Figure Shop. All Rights Reserved.</p>
                         </div>
                     </div>
                 </body>
                 </html>
             ";
-            $mail->AltBody = "Welcome to Lifestyle Store, " . htmlspecialchars($name) . "!";
+            $mail->AltBody = "Welcome to Figure Shop, " . htmlspecialchars($name) . "!";
             
             $mail->send();
             return true;
             
-        } catch (Exception $e) {
-            error_log("PHPMailer Error: " . $mail->ErrorInfo);
+        } catch (\Exception $e) {
+            error_log("PHPMailer Error: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
             return false;
         }
     }
@@ -131,11 +167,11 @@ class MailHelper {
             <body>
                 <div class='container'>
                     <div class='header'>
-                        <h1>Lifestyle Store</h1>
+                        <h1>Figure Shop</h1>
                     </div>
                     <div class='content'>
                         <h2>Welcome, " . htmlspecialchars($name) . "!</h2>
-                        <p>Thank you for registering with Lifestyle Store.</p>
+                        <p>Thank you for registering with Figure Shop.</p>
                         <p>Please verify your email address by clicking the button below:</p>
                         <a href='" . htmlspecialchars($verification_link) . "' class='button'>Verify Email</a>
                         <p>Or copy and paste this link in your browser:</p>
@@ -147,7 +183,7 @@ class MailHelper {
                         </p>
                     </div>
                     <div class='footer'>
-                        <p>&copy; Lifestyle Store. All Rights Reserved.</p>
+                        <p>&copy; Figure Shop. All Rights Reserved.</p>
                     </div>
                 </div>
             </body>

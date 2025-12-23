@@ -4,8 +4,8 @@ session_start();
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
-        <title>Lifestyle Store</title>
+        <link rel="shortcut icon" href="img/avatar.png" />
+        <title>Figure Shop - Shop Mô Hình</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- latest compiled and minified CSS -->
@@ -26,52 +26,53 @@ session_start();
                <div class="container">
                    <center>
                    <div id="bannerContent">
-                       <h1>We sell lifestyle.</h1>
-                       <p>Flat 40% OFF on all premium brands.</p>
-                       <a href="products.php" class="btn btn-danger">Shop Now</a>
+                       <img src="img/avatar.png" alt="Figure Shop Logo" class="banner-logo" style="max-width: 150px; margin-bottom: 20px; border-radius: 50%; border: 3px solid var(--primary-yellow); box-shadow: 0 4px 8px rgba(0,0,0,0.5);">
+                       <h1>Figure Shop</h1>
+                       <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
+                       <a href="products.php" class="btn btn-danger">Mua Ngay</a>
                    </div>
                    </center>
                </div>
            </div>
-           <div class="container">
+           <div class="container" style="margin-top: 50px; margin-bottom: 50px;">
                <div class="row">
-                   <div class="col-xs-4">
-                       <div  class="thumbnail">
-                           <a href="products.php">
-                                <img src="img/camera.jpg" alt="Camera">
-                           </a>
-                           <center>
-                                <div class="caption">
-                                        <p id="autoResize">Cameras</p>
-                                        <p>Choose among the best available in the world.</p>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-red">
+                           <a href="products.php?category=new" class="category-link">
+                                <div class="category-image-wrapper">
+                                    <img src="img/anh1.jpg" alt="Hàng Mới Về" class="category-image">
                                 </div>
-                           </center>
+                                <div class="category-content">
+                                    <h3 class="category-title">Hàng Mới Về</h3>
+                                    <p class="category-description">Những mô hình mới nhất vừa về kho</p>
+                                </div>
+                           </a>
                        </div>
                    </div>
-                   <div class="col-xs-4">
-                       <div class="thumbnail">
-                           <a href="products.php">
-                               <img src="img/watch.jpg" alt="Watch">
-                           </a>
-                           <center>
-                                <div class="caption">
-                                    <p id="autoResize">Watches</p>
-                                    <p>Original watches from the best brands.</p>
-                                </div>
-                           </center>
-                       </div>
-                   </div>
-                   <div class="col-xs-4">
-                       <div class="thumbnail">
-                           <a href="products.php">
-                               <img src="img/shirt.jpg" alt="Shirt">
-                           </a>
-                           <center>
-                               <div class="caption">
-                                   <p id="autoResize">Shirts</p>
-                                   <p>Our exquisite collection of shirts.</p>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-yellow">
+                           <a href="products.php?category=bestseller" class="category-link">
+                               <div class="category-image-wrapper">
+                                   <img src="img/anh2.jpg" alt="Best Seller" class="category-image">
                                </div>
-                           </center>
+                               <div class="category-content">
+                                   <h3 class="category-title">Best Seller</h3>
+                                   <p class="category-description">Sản phẩm bán chạy nhất</p>
+                               </div>
+                           </a>
+                       </div>
+                   </div>
+                   <div class="col-xs-12 col-sm-4">
+                       <div class="category-card category-card-black">
+                           <a href="products.php" class="category-link">
+                               <div class="category-image-wrapper">
+                                   <img src="img/anh3.jpg" alt="Tất Cả Sản Phẩm" class="category-image">
+                               </div>
+                               <div class="category-content">
+                                   <h3 class="category-title">Tất Cả Sản Phẩm</h3>
+                                   <p class="category-description">Bộ sưu tập mô hình đầy đủ nhất</p>
+                               </div>
+                           </a>
                        </div>
                    </div>
                </div>
@@ -80,11 +81,13 @@ session_start();
            <footer class="footer"> 
                <div class="container">
                <center>
-                   <p>Copyright &copy Lifestyle Store. All Rights Reserved. | Contact Us: +91 90000 00000</p>
-                   <p>This website is developed by Sajal Agrawal</p>
+                   <p>Copyright &copy Figure Shop. All Rights Reserved. | Liên Hệ: +84 0854008327</p>
+                   <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
                </center>
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

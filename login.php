@@ -5,8 +5,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="shortcut icon" href="img/lifestyleStore.png" />
-        <title>Lifestyle Store</title>
+        <link rel="shortcut icon" href="img/avatar.png" />
+        <title>Đăng Nhập - Figure Shop</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- latest compiled and minified CSS -->
@@ -26,27 +26,29 @@
             <br><br><br>
            <div class="container">
                 <div class="row">
-                    <div class="col-xs-6 col-xs-offset-3">
-                        <div class="panel panel-primary">
-                            <div class="panel-heading">
-                                <h3>LOGIN</h3>
+                    <div class="col-xs-12 col-sm-8 col-md-6 col-lg-4 col-xs-offset-0 col-sm-offset-2 col-md-offset-3 col-lg-offset-4">
+                        <div class="login-container">
+                            <div class="login-header">
+                                <h2><strong>ĐĂNG NHẬP</strong></h2>
                             </div>
-                            <div class="panel-body">
-                                <p>Login to make a purchase.</p>
+                            <div class="login-body">
+                                <p class="login-text">Đăng nhập để mua sắm</p>
                                 <form method="post" action="login_submit.php">
                                     <?php echo SecurityHelper::getCSRFField(); ?>
                                     <div class="form-group">
-                                        <input type="email" class="form-control" name="email" placeholder="Email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$" required>
+                                        <input type="email" class="form-control login-input" name="email" placeholder="Email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$" required>
                                     </div>
                                     <div class="form-group">
-                                        <input type="password" class="form-control" name="password" placeholder="Password(min. 6 characters)" pattern=".{6,}" required>
+                                        <input type="password" class="form-control login-input" name="password" placeholder="Mật khẩu" required>
                                     </div>
                                     <div class="form-group">
-                                        <input type="submit" value="Login" class="btn btn-primary">
+                                        <input type="submit" value="Đăng Nhập" class="btn btn-login btn-block">
                                     </div>
                                 </form>
                             </div>
-                            <div class="panel-footer">Don't have an account yet? <a href="signup.php">Register</a></div>
+                            <div class="login-footer">
+                                <p>Chưa có tài khoản? <a href="signup.php" class="register-link">Đăng ký ngay</a></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -55,11 +57,13 @@
            <footer class="footer">
                <div class="container">
                <center>
-                   <p>Copyright &copy Lifestyle Store. All Rights Reserved. | Contact Us: +91 90000 00000</p>
-                   <p>This website is developed by Sajal Agrawal</p>
+                   <p>Copyright &copy Figure Shop. All Rights Reserved. | Liên Hệ: +84 0854008327</p>
+                   <p>Shop mô hình chính hãng - Nơi hội tụ đam mê sưu tầm</p>
                </center>
                </div>
            </footer>
         </div>
+        
+        <?php require 'hotline_widget.php'; ?>
     </body>
 </html>

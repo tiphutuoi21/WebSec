@@ -88,26 +88,113 @@ class SecurityHelper {
     
     /**
      * Validate password strength
+     * Requirements:
+     * - Minimum 8 characters (ideally 12-15+)
+     * - Must contain uppercase (A-Z)
+     * - Must contain lowercase (a-z)
+     * - Must contain numbers (0-9)
+     * - Must contain special characters (!, @, #, $, %, etc.)
+     * - Cannot contain personal information (name, email, phone, address)
+     * - Cannot be common words or sequences (123456, 113, 115, etc.)
      */
-    public static function isStrongPassword($password) {
-        // Minimum 6 characters
-        if (strlen($password) < 6) {
-            return ['valid' => false, 'message' => 'Password must be at least 6 characters'];
+    public static function isStrongPassword($password, $userData = []) {
+        // Minimum 8 characters
+        if (strlen($password) < 8) {
+            return ['valid' => false, 'message' => 'Mật khẩu phải có tối thiểu 8 ký tự (lý tưởng 12-15 ký tự)'];
         }
         
-        // Optional: Require mixed case and numbers for better security
-        // Uncomment below for stricter validation:
-        // if (!preg_match('/[A-Z]/', $password)) {
-        //     return ['valid' => false, 'message' => 'Password must contain uppercase letters'];
-        // }
-        // if (!preg_match('/[a-z]/', $password)) {
-        //     return ['valid' => false, 'message' => 'Password must contain lowercase letters'];
-        // }
-        // if (!preg_match('/[0-9]/', $password)) {
-        //     return ['valid' => false, 'message' => 'Password must contain numbers'];
-        // }
+        // Must contain uppercase letters
+        if (!preg_match('/[A-Z]/', $password)) {
+            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất một chữ cái viết hoa (A-Z)'];
+        }
         
-        return ['valid' => true, 'message' => 'Password is valid'];
+        // Must contain lowercase letters
+        if (!preg_match('/[a-z]/', $password)) {
+            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất một chữ cái viết thường (a-z)'];
+        }
+        
+        // Must contain numbers
+        if (!preg_match('/[0-9]/', $password)) {
+            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất một số (0-9)'];
+        }
+        
+        // Must contain special characters
+        if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $password)) {
+            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt (!, @, #, $, %, v.v.)'];
+        }
+        
+        // Check for personal information if provided
+        if (!empty($userData)) {
+            $name = isset($userData['name']) ? strtolower($userData['name']) : '';
+            $email = isset($userData['email']) ? strtolower(explode('@', $userData['email'])[0]) : '';
+            $contact = isset($userData['contact']) ? $userData['contact'] : '';
+            $city = isset($userData['city']) ? strtolower($userData['city']) : '';
+            $address = isset($userData['address']) ? strtolower($userData['address']) : '';
+            
+            $password_lower = strtolower($password);
+            
+            // Check name - only match complete words or significant parts
+            if (!empty($name)) {
+                $name_parts = explode(' ', $name);
+                foreach ($name_parts as $part) {
+                    $part_lower = strtolower(trim($part));
+                    if (strlen($part_lower) >= 4) {
+                        // For 4+ character names, check substring match
+                        if (strpos($password_lower, $part_lower) !== false) {
+                            return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên của bạn'];
+                        }
+                    } elseif (strlen($part_lower) == 3) {
+                        // For 3-character names, check as whole word only to avoid false positives
+                        $name_pattern = '/\b' . preg_quote($part_lower, '/') . '\b/i';
+                        if (preg_match($name_pattern, $password_lower)) {
+                            return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên của bạn'];
+                        }
+                    }
+                }
+            }
+            
+            // Check email username
+            if (!empty($email) && strlen($email) >= 3 && strpos($password_lower, $email) !== false) {
+                return ['valid' => false, 'message' => 'Mật khẩu không được chứa email của bạn'];
+            }
+            
+            // Check phone number
+            if (!empty($contact) && strlen($contact) >= 3) {
+                // Remove common separators
+                $contact_clean = preg_replace('/[\s\-\(\)]/', '', $contact);
+                if (strlen($contact_clean) >= 3 && strpos($password, $contact_clean) !== false) {
+                    return ['valid' => false, 'message' => 'Mật khẩu không được chứa số điện thoại của bạn'];
+                }
+            }
+            
+            // Check city - only match if city is a complete word or significant part
+            if (!empty($city) && strlen($city) >= 4) {
+                // Only check if city name is 4+ characters to avoid false positives
+                if (strpos($password_lower, $city) !== false) {
+                    return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên thành phố của bạn'];
+                }
+            } elseif (!empty($city) && strlen($city) == 3) {
+                // For 3-character city names, check as whole word only (with word boundaries)
+                // This prevents false positives like "Nhu" matching in "Nhu123@@"
+                $city_pattern = '/\b' . preg_quote($city, '/') . '\b/i';
+                if (preg_match($city_pattern, $password_lower)) {
+                    return ['valid' => false, 'message' => 'Mật khẩu không được chứa tên thành phố của bạn'];
+                }
+            }
+        }
+        
+        // Check for common weak passwords
+        $common_passwords = ['123456', '12345678', 'password', 'password123', 'qwerty', 'abc123', '111111', '113', '115'];
+        if (in_array(strtolower($password), array_map('strtolower', $common_passwords))) {
+            return ['valid' => false, 'message' => 'Mật khẩu này quá phổ biến và dễ đoán. Vui lòng chọn mật khẩu khác'];
+        }
+        
+        // Check for sequential numbers
+        if (preg_match('/123|234|345|456|567|678|789|987|876|765|654|543|432|321/', $password)) {
+            return ['valid' => false, 'message' => 'Mật khẩu không được chứa chuỗi số liên tiếp dễ đoán'];
+        }
+        
+        return ['valid' => true, 'message' => 'Mật khẩu hợp lệ'];
     }
     
     /**
