@@ -6,8 +6,13 @@ if (session_status() === PHP_SESSION_NONE) {
     SessionManager::initializeSecureSession();
 }
 
-// Now establish database connection
-$con = mysqli_connect("localhost", "root", "", "store") or die(mysqli_error($con));
+// Thay đổi Host, User, Pass theo thông tin bạn đã tạo
+$servername = "127.0.0.1"; // Khuyên dùng IP này thay cho 'localhost' để tránh lỗi quyền
+$username   = "mychos"; // Tên user bạn vừa tạo (Ví dụ: dev_user)
+$password   = ""; // Mật khẩu bạn đã đặt
+$dbname     = "store";        // Tên database vẫn giữ nguyên là 'store'
+
+$con = mysqli_connect($servername, $username, $password, $dbname) or die(mysqli_error($con));
 
 // Set charset for database connection
 mysqli_set_charset($con, "utf8");
