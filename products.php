@@ -42,7 +42,14 @@
         $page_description = 'Bộ sưu tập mô hình đầy đủ nhất';
     }
     
-    $result = mysqli_query($con, $query) or die(mysqli_error($con));
+    // Execute query with proper error handling
+    $result = mysqli_query($con, $query);
+    if (!$result) {
+        error_log("Database query error in products.php: " . mysqli_error($con));
+        echo "An error occurred while loading products. Please try again.";
+        exit();
+    }
+    
     $products = array();
     while ($row = mysqli_fetch_assoc($result)) {
         $products[] = $row;
@@ -155,15 +162,15 @@
                                             </div>
                                         <?php endif; ?>
                                         <div class="product-card-actions">
-                                            <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-product-detail">Xem Chi Tiết</a>
+                                        <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-product-detail">Xem Chi Tiết</a>
                                             <?php if(!isset($_SESSION['email'])): ?>
                                                 <a href="login.php" class="btn btn-product-buy">Mua Ngay</a>
                                             <?php else:
                                                 if(check_if_added_to_cart($product['id'])):
-                                                    echo '<a href="#" class="btn btn-product-added disabled">Đã thêm vào giỏ</a>';
+                                                    echo '<a href="cart.php" class="btn btn-product-added disabled">Đã thêm vào giỏ</a>';
                                                 else:
                                             ?>
-                                                <a href="product.php?id=<?php echo $product['id']; ?>" class="btn btn-product-add">Thêm vào giỏ</a>
+                                                <a href="product.php?id=<?php echo intval($product['id']); ?>" class="btn btn-product-add">Thêm vào giỏ</a>
                                             <?php 
                                                 endif;
                                             endif; ?>

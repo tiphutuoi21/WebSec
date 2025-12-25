@@ -1,7 +1,7 @@
 <?php
     require 'connection.php';
     if(!isset($_SESSION['email'])){
-        header('location:index.php');
+        header('Location: index.php');
     }
     
     // Fetch user's previous orders
@@ -212,22 +212,25 @@
                                 <h2><strong>ĐẶT LẠI MẬT KHẨU</strong></h2>
                             </div>
                             <div class="signup-body">
-                                <form method="post" action="setting_script.php">
-                                    <div class="form-group">
-                                        <input type="password" class="form-control signup-input" name="oldPassword" id="oldPassword" placeholder="Mật khẩu cũ" required="true">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="password" class="form-control signup-input" name="newPassword" id="newPassword" placeholder="Mật khẩu mới" required="true">
-                                        <div id="password-error" style="margin-top: 8px; color: #DC143C; font-size: 13px; display: none;"></div>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="password" class="form-control signup-input" name="retype" id="retypePassword" placeholder="Nhập lại mật khẩu mới" required="true">
-                                        <div id="retype-error" style="margin-top: 8px; color: #DC143C; font-size: 13px; display: none;"></div>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="submit" class="btn btn-signup btn-block" value="Đổi Mật Khẩu">
-                                    </div>
-                                </form>
+                                <div style="background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                    <p style="margin: 0; color: #555; font-size: 14px;">
+                                        <strong>Enhanced Security:</strong> For your account protection, we now require email verification (OTP) before changing your password.
+                                    </p>
+                                </div>
+                                
+                                <a href="change_password.php" class="btn btn-primary btn-block" style="padding: 12px; text-decoration: none; display: inline-block; width: 100%; text-align: center; background-color: #007bff; color: white; border-radius: 4px; font-weight: bold;">
+                                    <span class="glyphicon glyphicon-lock"></span> Đổi Mật Khẩu Với OTP
+                                </a>
+                                
+                                <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+                                    Quá trình đổi mật khẩu:
+                                </p>
+                                <ol style="color: #666; font-size: 12px; margin: 10px 0;">
+                                    <li>Nhấp vào nút trên</li>
+                                    <li>Chúng tôi sẽ gửi mã OTP đến email của bạn</li>
+                                    <li>Nhập mã OTP (hết hạn trong 1 phút)</li>
+                                    <li>Thiết lập mật khẩu mới của bạn</li>
+                                </ol>
                             </div>
                         </div>
                     </div>
@@ -262,7 +265,7 @@
                                             </div>
                                             <div>
                                                 <div class="order-amount">
-                                                    Rs. <?php echo number_format($order['total_amount'], 2); ?>
+                                                    ₫ <?php echo number_format($order['total_amount'], 0); ?>
                                                 </div>
                                                 <div>
                                                     <?php
@@ -298,7 +301,7 @@
                                                             echo '<li>';
                                                             echo htmlspecialchars($item['name']) . ' - ';
                                                             echo 'Qty: ' . intval($item['quantity']) . ' × ';
-                                                            echo 'Rs. ' . number_format($item['unit_price'], 2);
+                                                            echo '₫ ' . number_format($item['unit_price'], 0);
                                                             echo '</li>';
                                                         }
                                                         echo '</ul>';

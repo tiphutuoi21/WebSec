@@ -2,10 +2,21 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
+    // Allow only POST requests
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: cart.php');
+        exit;
+    }
+    
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !SecurityHelper::verifyCSRFToken($_POST['csrf_token'])) {
+        die('CSRF token validation failed');
+    }
+
     // Check if user is logged in
     SecurityHelper::requireLogin();
     
-    $cart_item_id = intval($_GET['id']);
+    $cart_item_id = intval($_POST['id']);
     $user_id = SecurityHelper::getUserId();
     
     // Verify the cart item belongs to this user (prevent direct object reference abuse)
@@ -24,5 +35,5 @@
         mysqli_stmt_close($stmt);
     }
     
-    header('location: cart.php');
+    header('Location: cart.php');
 ?>

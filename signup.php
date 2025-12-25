@@ -2,7 +2,7 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     if(isset($_SESSION['email'])){
-        header('location: products.php');
+        header('Location: products.php');
     }
 ?>
 

@@ -94,9 +94,13 @@
                                     <td><?php echo number_format($row['price'], 0, ',', '.'); ?> VNĐ</td>
                                     <td><strong><?php echo number_format($item_total, 0, ',', '.'); ?> VNĐ</strong></td>
                                     <td>
-                                        <a href='cart_remove.php?id=<?php echo $row['id'] ?>' class="btn btn-cart-remove">
-                                            <span class="glyphicon glyphicon-trash"></span> Xóa
-                                        </a>
+                                        <form action="cart_remove.php" method="POST" style="display:inline-block;">
+                                            <?php echo SecurityHelper::getCSRFField(); ?>
+                                            <input type="hidden" name="id" value="<?php echo intval($row['id']); ?>">
+                                            <button type="submit" class="btn btn-cart-remove" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">
+                                                <span class="glyphicon glyphicon-trash"></span> Xóa
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                <?php $counter = $counter + 1;

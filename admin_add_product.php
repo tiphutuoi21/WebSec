@@ -1,8 +1,12 @@
 <?php
     require 'connection.php';
+    require 'SecurityHelper.php';
     
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
+        exit();
     }
 ?>
 <!DOCTYPE html>
@@ -33,6 +37,7 @@
                         </div>
                         <div class="panel-body">
                             <form method="post" action="admin_add_product_submit.php">
+                                <?php echo SecurityHelper::getCSRFField(); ?>
                                 <div class="form-group">
                                     <label>Product Name</label>
                                     <input type="text" class="form-control" name="name" placeholder="Enter product name" required>

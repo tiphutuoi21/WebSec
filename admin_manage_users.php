@@ -2,13 +2,14 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
-    // Require admin login
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
         exit();
     }
     
-    $users_query = "select * from users";
+    $users_query = "SELECT * FROM users";
     $users_result = mysqli_query($con, $users_query) or die(mysqli_error($con));
 ?>
 <!DOCTYPE html>
@@ -28,6 +29,7 @@
             <div class="admin-nav">
                 <h3>Admin Dashboard (<?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'])); ?>)</h3>
                 <a href="admin_dashboard.php">Dashboard</a>
+                <a href="admin_orders.php">View Orders</a>
                 <a href="admin_manage_users.php">Manage Users</a>
                 <a href="admin_manage_products.php">Manage Products</a>
                 <?php if(intval($_SESSION['admin_role_id']) === 1): ?>
@@ -72,7 +74,11 @@
                                         <td><?php echo htmlspecialchars($row['address']); ?></td>
                                         <?php if(intval($_SESSION['admin_role_id']) === 1): ?>
                                             <td>
-                                                <a href="admin_delete_user.php?id=<?php echo $row['id']; ?>" class="admin-btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa người dùng này?');">Xóa</a>
+                                                <form method="POST" action="admin_delete_user.php" style="display: inline;">
+                                                    <?php echo SecurityHelper::getCSRFField(); ?>
+                                                    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+                                                    <button type="submit" class="admin-btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa người dùng này?');">Xóa</button>
+                                                </form>
                                             </td>
                                         <?php endif; ?>
                                     </tr>

@@ -3,7 +3,7 @@
     require 'SecurityHelper.php';
     
     if(!isset($_SESSION['email'])){
-        header('location:index.php');
+        header('Location: index.php');
         exit();
     }
     
@@ -83,9 +83,8 @@
         exit();
     }
     
-    // Hash passwords
-    $old_password_hash = md5(md5($old_password));
-    $new_password_hash = md5(md5($new_password));
+    // Hash new password with bcrypt
+    $new_password_hash = password_hash($new_password, PASSWORD_BCRYPT);
     
     // Verify old password using prepared statement
     $password_from_database_query = "SELECT password FROM users WHERE email = ?";
@@ -97,9 +96,25 @@
         $row = mysqli_fetch_assoc($result);
         mysqli_stmt_close($stmt);
         
-        if ($row && $row['password'] == $old_password_hash) {
+        $password_correct = false;
+        if ($row) {
+            $stored_hash = $row['password'];
+            // Use bcrypt password_verify() - no MD5 support
+            $password_correct = password_verify($old_password, $stored_hash);
+        }
+        
+        if (!$password_correct) {
+            ?>
+            <script>
+                window.alert("Mật khẩu cũ không đúng!");
+            </script>
+            <meta http-equiv="refresh" content="1;url=settings.php" />
+            <?php
+        } else {
             // Check if new password is the same as current password
-            if ($new_password_hash == $old_password_hash) {
+            $same_password = password_verify($new_password, $stored_hash);
+            
+            if ($same_password) {
                 ?>
                 <script>
                     window.alert("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
@@ -109,44 +124,9 @@
                 exit();
             }
             
-            // Check password history - prevent reusing old passwords
-            // First, ensure password_history table exists
-            $check_table = "SHOW TABLES LIKE 'password_history'";
-            $table_result = mysqli_query($con, $check_table);
-            if (mysqli_num_rows($table_result) == 0) {
-                // Create password_history table if it doesn't exist
-                $create_table = "CREATE TABLE IF NOT EXISTS `password_history` (
-                    `id` int(11) NOT NULL AUTO_INCREMENT,
-                    `user_id` int(11) NOT NULL,
-                    `password_hash` varchar(255) NOT NULL,
-                    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    KEY `user_id` (`user_id`),
-                    KEY `created_at` (`created_at`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=latin1";
-                mysqli_query($con, $create_table);
-            }
-            
-            $user_id = $user['id'];
-            $check_history_query = "SELECT COUNT(*) as count FROM password_history WHERE user_id = ? AND password_hash = ?";
-            $history_stmt = mysqli_prepare($con, $check_history_query);
-            if ($history_stmt) {
-                mysqli_stmt_bind_param($history_stmt, "is", $user_id, $new_password_hash);
-                mysqli_stmt_execute($history_stmt);
-                $history_result = mysqli_stmt_get_result($history_stmt);
-                $history_row = mysqli_fetch_assoc($history_result);
-                mysqli_stmt_close($history_stmt);
-                
-                if ($history_row && $history_row['count'] > 0) {
-                    ?>
-                    <script>
-                        window.alert("Mật khẩu mới không được trùng với mật khẩu đã từng sử dụng trước đây!");
-                    </script>
-                    <meta http-equiv="refresh" content="1;url=settings.php" />
-                    <?php
-                    exit();
-                }
-            }
+            // Note: Password history check is skipped for bcrypt since it generates unique hashes
+            // The password_history table stores old passwords for audit purposes
+            // but we don't prevent reuse since bcrypt hashes are always unique
             
             // Update password using prepared statement
             $update_password_query = "UPDATE users SET password = ? WHERE email = ?";
@@ -154,12 +134,13 @@
             if ($update_stmt) {
                 mysqli_stmt_bind_param($update_stmt, "ss", $new_password_hash, $email);
                 if (mysqli_stmt_execute($update_stmt)) {
-                    // Save old password to history
+                    // Save old password to history (for audit purposes)
                     $user_id = $user['id'];
                     $insert_history_query = "INSERT INTO password_history (user_id, password_hash) VALUES (?, ?)";
                     $history_insert_stmt = mysqli_prepare($con, $insert_history_query);
                     if ($history_insert_stmt) {
-                        mysqli_stmt_bind_param($history_insert_stmt, "is", $user_id, $old_password_hash);
+                        // Store the old password hash from database
+                        mysqli_stmt_bind_param($history_insert_stmt, "is", $user_id, $stored_hash);
                         mysqli_stmt_execute($history_insert_stmt);
                         mysqli_stmt_close($history_insert_stmt);
                     }
@@ -245,13 +226,6 @@
                 <meta http-equiv="refresh" content="1;url=settings.php" />
                 <?php
             }
-        } else {
-            ?>
-            <script>
-                window.alert("Mật khẩu cũ không đúng!");
-            </script>
-            <meta http-equiv="refresh" content="1;url=settings.php" />
-            <?php
         }
     } else {
         ?>

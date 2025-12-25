@@ -1,16 +1,56 @@
 <?php
     require 'connection.php';
+    require 'SecurityHelper.php';
     
     header('Content-Type: application/json');
     
-    // Get search query from GET
+    // Get and sanitize search query from GET
     $search_query = isset($_GET['q']) ? trim($_GET['q']) : '';
     $results = array();
     
+    // Define harmful characters and patterns that should be filtered
+    $harmful_patterns = array(
+        '/<script[^>]*>.*?<\/script>/i',  // Script tags
+        '/<iframe[^>]*>.*?<\/iframe>/i', // iFrame tags
+        '/<img[^>]*on\w+\s*=/i',          // img with event handlers
+        '/<[a-z][a-z0-9]*[^>]*on\w+\s*=/i', // Any tag with event handlers
+        '/<svg[^>]*on\w+\s*=/i',          // SVG with event handlers
+        '/javascript:/i',                  // javascript: protocol
+        '/data:text\/html/i',             // data:text/html protocol
+        '/vbscript:/i',                   // vbscript: protocol
+        '/<body[^>]*on\w+\s*=/i'          // body with event handlers
+    );
+    
     if (strlen($search_query) >= 2) {
+        // Check for harmful patterns
+        $is_harmful = false;
+        foreach ($harmful_patterns as $pattern) {
+            if (preg_match($pattern, $search_query)) {
+                $is_harmful = true;
+                break;
+            }
+        }
+        
+        if ($is_harmful) {
+            // Return empty results if harmful content detected
+            echo json_encode($results);
+            exit();
+        }
+        
         // Validate search length (max 255 characters)
         if (strlen($search_query) > 255) {
             $search_query = substr($search_query, 0, 255);
+        }
+        
+        // Remove any remaining special characters that could be harmful
+        // Allow only alphanumeric, spaces, and common Vietnamese characters
+        $search_query = preg_replace('/[^a-zA-Z0-9\p{L}\s\-_.]/u', '', $search_query);
+        $search_query = trim($search_query);
+        
+        // If search query is empty after filtering, return no results
+        if (strlen($search_query) < 2) {
+            echo json_encode($results);
+            exit();
         }
         
         // Prepare statement to prevent SQL injection

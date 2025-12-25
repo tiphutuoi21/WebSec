@@ -26,28 +26,32 @@ class SessionManager {
         
         // Only configure session settings if session hasn't started yet
         if (session_status() === PHP_SESSION_NONE) {
+            // Determine if HTTPS is actually enabled
+            $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+                       (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+            
             // Session configuration
             ini_set('session.use_strict_mode', 1);
             ini_set('session.use_only_cookies', 1);
             ini_set('session.use_trans_sid', 0);
-            ini_set('session.cookie_secure', isset($_SERVER['HTTPS'])); // Only HTTPS in production
+            ini_set('session.cookie_secure', $is_https); // Only HTTPS in production
             ini_set('session.cookie_httponly', 1); // Prevent JS access to session cookie
-            ini_set('session.cookie_samesite', 'Strict'); // CSRF protection
+            ini_set('session.cookie_samesite', 'Strict'); // Stronger CSRF protection
             ini_set('session.gc_maxlifetime', self::SESSION_DURATION); // Server-side garbage collection
             
             // Set cookie parameters
             session_set_cookie_params([
                 'lifetime' => self::SESSION_DURATION,
                 'path' => '/',
-                'secure' => isset($_SERVER['HTTPS']),
-                'httponly' => true,
-                'samesite' => 'Strict'
+                'domain' => '',  // Empty domain for current domain
+                'secure' => $is_https,  // Only HTTPS in production
+                'httponly' => true,  // Prevent JS access
+                'samesite' => 'Strict'  // Stronger CSRF protection
             ]);
             
             // Start session with generated ID
             session_start();
         }
-        
         // Regenerate session ID on login to prevent session fixation attacks
         // This should be called explicitly in login_submit.php
     }
@@ -72,7 +76,7 @@ class SessionManager {
      * @param string $session_type - 'admin' or 'customer'
      * @return bool - True if successful
      */
-    public static function createUserSession($con, $user_id, $user_email, $role_id, $session_type = 'customer') {
+    public static function createUserSession($con, $user_id, $user_email, $role_id, $session_type = 'customer', $user_uuid = null) {
         $user_id = intval($user_id);
         $role_id = intval($role_id);
         
@@ -91,42 +95,61 @@ class SessionManager {
         $_SESSION['login_time'] = time();
         $_SESSION['last_activity'] = time();
         $_SESSION['session_id_hash'] = hash('sha256', $new_session_id); // Store hash for verification
+        $_SESSION['session_logged_in_db'] = false; // Track whether session row exists
+        $_SESSION['user_uid'] = $user_uuid; // Optional UUID for user/admin
         
         // For admin sessions
         if ($session_type === 'admin') {
             $_SESSION['admin_email'] = $user_email;
             $_SESSION['admin_role_id'] = $role_id;
             $_SESSION['admin_role'] = self::getRoleName($role_id);
+            $_SESSION['admin_uid'] = $user_uuid;
         }
         
-        // Step 4: Log session creation to database
-        $ip_address = $_SERVER['REMOTE_ADDR'];
-        $user_agent = $_SERVER['HTTP_USER_AGENT'];
-        
-        $insert_query = "INSERT INTO " . self::SESSION_TABLE . " 
-                        (session_id, user_id, user_email, role_id, ip_address, user_agent, session_type, login_time, last_activity, is_active) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 1)";
-        
-        $stmt = mysqli_prepare($con, $insert_query);
-        if (!$stmt) {
-            // Table might not exist - log but don't fail
-            error_log("Session insert prepare error: " . mysqli_error($con) . " - Continuing without database session tracking");
-            // Still return true because session variables are set
-            return true;
+        // Step 4: Log session creation to database (best-effort, skip if FK would fail)
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+
+        $can_log_session = true;
+
+        // If session_type is admin and user_id is not present in users table, skip DB insert to avoid FK failure
+        if ($session_type === 'admin') {
+            $check_user = mysqli_prepare($con, "SELECT id FROM users WHERE id = ? LIMIT 1");
+            if ($check_user) {
+                mysqli_stmt_bind_param($check_user, "i", $user_id);
+                mysqli_stmt_execute($check_user);
+                $res = mysqli_stmt_get_result($check_user);
+                $exists = $res && mysqli_num_rows($res) > 0;
+                mysqli_stmt_close($check_user);
+                if (!$exists) {
+                    $can_log_session = false; // avoid FK violation
+                }
+            }
         }
-        
-        $session_id_hash = hash('sha256', $new_session_id);
-        mysqli_stmt_bind_param($stmt, "siiisss", $session_id_hash, $user_id, $user_email, $role_id, $ip_address, $user_agent, $session_type);
-        
-        if (!mysqli_stmt_execute($stmt)) {
-            // Table might not exist - log but don't fail
-            error_log("Session insert execute error: " . mysqli_stmt_error($stmt) . " - Continuing without database session tracking");
+
+        if ($can_log_session) {
+            $insert_query = "INSERT INTO " . self::SESSION_TABLE . " 
+                            (session_id, user_id, user_email, role_id, ip_address, user_agent, session_type, login_time, last_activity, is_active) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 1)";
+            
+            $stmt = mysqli_prepare($con, $insert_query);
+            if (!$stmt) {
+                // Table might not exist - log but don't fail
+                error_log("Session insert prepare error: " . mysqli_error($con) . " - Continuing without database session tracking");
+                return true;
+            }
+            
+            mysqli_stmt_bind_param($stmt, "siiisss", $new_session_id, $user_id, $user_email, $role_id, $ip_address, $user_agent, $session_type);
+            
+            if (!mysqli_stmt_execute($stmt)) {
+                error_log("Session insert execute error: " . mysqli_stmt_error($stmt) . " - Continuing without database session tracking");
+                mysqli_stmt_close($stmt);
+                return true;
+            }
+            
             mysqli_stmt_close($stmt);
-            // Still return true because session variables are set
-            return true;
+            $_SESSION['session_logged_in_db'] = true; // Mark that DB row exists for validation
         }
-        
-        mysqli_stmt_close($stmt);
         return true;
     }
     
@@ -139,6 +162,15 @@ class SessionManager {
      */
     public static function invalidateUserSessions($con, $user_id) {
         $user_id = intval($user_id);
+        
+        // Check if sessions table exists before trying to update
+        $check_table = "SHOW TABLES LIKE '" . self::SESSION_TABLE . "'";
+        $table_check = mysqli_query($con, $check_table);
+        
+        if (!$table_check || mysqli_num_rows($table_check) === 0) {
+            // Table doesn't exist, skip this step
+            return;
+        }
         
         $update_query = "UPDATE " . self::SESSION_TABLE . " SET is_active = 0, logged_out_time = NOW() WHERE user_id = ? AND is_active = 1";
         
@@ -169,16 +201,17 @@ class SessionManager {
         
         $user_id = intval($_SESSION['id']);
         
-        // Check session timeout
-        if (isset($_SESSION['login_time'])) {
-            $session_age = time() - $_SESSION['login_time'];
+        // Check session timeout using sliding window (last activity)
+        $last_activity = $_SESSION['last_activity'] ?? $_SESSION['login_time'] ?? 0;
+        if ($last_activity > 0) {
+            $session_age = time() - $last_activity;
             if ($session_age > self::SESSION_DURATION) {
                 self::destroySession($con, $user_id);
                 return false;
             }
         }
-        
-        // Update last activity
+
+        // Update last activity on each validation
         $_SESSION['last_activity'] = time();
         
         // Try to verify session in database (if table exists)
@@ -186,25 +219,32 @@ class SessionManager {
         if (isset($_SESSION['session_id_hash'])) {
             $session_id_hash = $_SESSION['session_id_hash'];
             
-            // Check if sessions table exists
-            $check_table = "SHOW TABLES LIKE '" . self::SESSION_TABLE . "'";
-            $table_check = mysqli_query($con, $check_table);
-            
-            if ($table_check && mysqli_num_rows($table_check) > 0) {
-                // Table exists - verify in database
-                $verify_query = "SELECT session_id FROM " . self::SESSION_TABLE . " 
-                                WHERE user_id = ? AND is_active = 1 AND session_id = ?";
+            // Only require DB verification if a session row was logged
+            $should_verify_db = isset($_SESSION['session_logged_in_db']) && $_SESSION['session_logged_in_db'] === true;
+
+            if ($should_verify_db) {
+                // Check if sessions table exists
+                $check_table = "SHOW TABLES LIKE '" . self::SESSION_TABLE . "'";
+                $table_check = mysqli_query($con, $check_table);
                 
-                $stmt = mysqli_prepare($con, $verify_query);
-                if ($stmt) {
-                    mysqli_stmt_bind_param($stmt, "is", $user_id, $session_id_hash);
-                    mysqli_stmt_execute($stmt);
-                    $result = mysqli_stmt_get_result($stmt);
-                    $is_valid = mysqli_num_rows($result) > 0;
-                    mysqli_stmt_close($stmt);
+                if ($table_check && mysqli_num_rows($table_check) > 0) {
+                    // Table exists - verify in database
+                    // We store the actual session ID in the database now, not the hash
+                    $current_session_id = session_id();
+                    $verify_query = "SELECT id FROM " . self::SESSION_TABLE . " 
+                                    WHERE user_id = ? AND is_active = 1 AND session_id = ?";
                     
-                    if (!$is_valid) {
-                        return false;
+                    $stmt = mysqli_prepare($con, $verify_query);
+                    if ($stmt) {
+                        mysqli_stmt_bind_param($stmt, "is", $user_id, $current_session_id);
+                        mysqli_stmt_execute($stmt);
+                        $result = mysqli_stmt_get_result($stmt);
+                        $is_valid = mysqli_num_rows($result) > 0;
+                        mysqli_stmt_close($stmt);
+                        
+                        if (!$is_valid) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -327,18 +367,41 @@ class SessionManager {
      * @param string $details - Additional details (optional)
      */
     public static function logSessionActivity($con, $user_id, $action, $details = '') {
-        $user_id = intval($user_id);
-        $ip_address = $_SERVER['REMOTE_ADDR'];
-        
-        $log_query = "INSERT INTO session_audit_log (user_id, action, details, ip_address, timestamp) 
-                     VALUES (?, ?, ?, ?, NOW())";
-        
-        $stmt = mysqli_prepare($con, $log_query);
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "isss", $user_id, $action, $details, $ip_address);
-            mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
+        if (!$con || $user_id <= 0) {
+            return false;
         }
+        
+        $user_id = intval($user_id);
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        
+        // Check if table exists
+        $check_table = "SHOW TABLES LIKE 'session_audit_log'";
+        $result = mysqli_query($con, $check_table);
+        
+        if (!$result || mysqli_num_rows($result) === 0) {
+            // Table doesn't exist, silently fail - it will be created by setup_tables.php
+            return false;
+        }
+        
+        try {
+            $log_query = "INSERT INTO session_audit_log (user_id, action, details, ip_address, timestamp) 
+                         VALUES (?, ?, ?, ?, NOW())";
+            
+            $stmt = mysqli_prepare($con, $log_query);
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "isss", $user_id, $action, $details, $ip_address);
+                $result = mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+                return $result;
+            }
+        } catch (mysqli_sql_exception $e) {
+            // Log session activity failed - possibly due to foreign key constraint or user not found
+            // This is non-critical, so we silently fail rather than crash
+            error_log("Session audit log failed for user $user_id: " . $e->getMessage());
+            return false;
+        }
+        
+        return false;
     }
     
     /**

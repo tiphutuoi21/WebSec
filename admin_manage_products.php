@@ -2,13 +2,14 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
-    // Require admin login
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+    // Validate session and check admin access (role_id = 1 only)
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || !isset($_SESSION['admin_role_id']) || $_SESSION['admin_role_id'] !== 1) {
+        header('location: admin_login.php');
         exit();
     }
     
-    $products_query = "select * from items";
+    $products_query = "SELECT * FROM items";
     $products_result = mysqli_query($con, $products_query) or die(mysqli_error($con));
 ?>
 <!DOCTYPE html>
@@ -26,13 +27,12 @@
     <body>
         <div class="container">
             <div class="admin-nav">
-                <h3>Admin Dashboard (<?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'])); ?>)</h3>
+                <h3>Admin Dashboard</h3>
                 <a href="admin_dashboard.php">Dashboard</a>
+                <a href="admin_orders.php">View Orders</a>
                 <a href="admin_manage_users.php">Manage Users</a>
                 <a href="admin_manage_products.php">Manage Products</a>
-                <?php if(intval($_SESSION['admin_role_id']) === 1): ?>
-                    <a href="admin_manage_sales.php">Manage Sales</a>
-                <?php endif; ?>
+                <a href="admin_manage_sales.php">Manage Sales</a>
                 <a href="admin_logout.php">Logout</a>
             </div>
             
@@ -61,7 +61,11 @@
                                         <td><?php echo number_format($row['price'], 0, ',', '.'); ?> VNĐ</td>
                                         <td>
                                             <a href="admin_edit_product.php?id=<?php echo $row['id']; ?>" class="admin-btn-warning btn-sm">Sửa</a>
-                                            <a href="admin_delete_product.php?id=<?php echo $row['id']; ?>" class="admin-btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">Xóa</a>
+                                            <form method="POST" action="admin_delete_product.php" style="display: inline;">
+                                                <?php echo SecurityHelper::getCSRFField(); ?>
+                                                <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+                                                <button type="submit" class="admin-btn-danger btn-sm" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">Xóa</button>
+                                            </form>
                                         </td>
                                     </tr>
                                     <?php

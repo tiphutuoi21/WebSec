@@ -2,23 +2,59 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
         exit();
+    }
+
+    // Rate limit admin product write actions
+    $adminWriteKey = 'product_write_' . ($_SESSION['admin_email'] ?? SecurityHelper::getClientIdentifier());
+    if (!SecurityHelper::checkRateLimit($adminWriteKey, 20, 300)) {
+        echo "<div style='text-align: center; padding: 40px; color: red;'>Too many product updates. Please wait a few minutes.</div>";
+        exit();
+    }
+    SecurityHelper::recordFailedAttempt($adminWriteKey);
+    
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !SecurityHelper::verifyCSRFToken($_POST['csrf_token'])) {
+        die('CSRF token validation failed');
     }
     
     $id = intval($_POST['id']);
-    $name = isset($_POST['name']) ? trim($_POST['name']) : '';
-    $price = isset($_POST['price']) ? floatval($_POST['price']) : 0;
-    $category = isset($_POST['category']) ? trim($_POST['category']) : '';
-    $description = isset($_POST['description']) ? trim($_POST['description']) : '';
-    $stock_quantity = isset($_POST['stock_quantity']) ? intval($_POST['stock_quantity']) : 0;
+    $name = SecurityHelper::getString('name', 'POST');
+    $price_raw = $_POST['price'] ?? '';
+    $category = SecurityHelper::getString('category', 'POST');
+    $description_raw = SecurityHelper::getString('description', 'POST');
+    $stock_quantity_raw = $_POST['stock_quantity'] ?? '';
     $is_new = isset($_POST['is_new']) ? 1 : 0;
-    
-    // Sanitize input
-    $name = mysqli_real_escape_string($con, $name);
-    $category = mysqli_real_escape_string($con, $category);
-    $description = mysqli_real_escape_string($con, $description);
+
+    // Field validation using centralized helpers
+    $nameCheck = SecurityHelper::validateProductName($name);
+    if (!$nameCheck['valid']) {
+        echo "<div style='text-align: center; padding: 40px; color: red;'>" . htmlspecialchars($nameCheck['message']) . "</div>";
+        exit();
+    }
+    $priceCheck = SecurityHelper::validateProductPrice($price_raw);
+    if (!$priceCheck['valid']) {
+        echo "<div style='text-align: center; padding: 40px; color: red;'>" . htmlspecialchars($priceCheck['message']) . "</div>";
+        exit();
+    }
+    $stockCheck = SecurityHelper::validateStockQuantity($stock_quantity_raw);
+    if (!$stockCheck['valid']) {
+        echo "<div style='text-align: center; padding: 40px; color: red;'>" . htmlspecialchars($stockCheck['message']) . "</div>";
+        exit();
+    }
+    $descCheck = SecurityHelper::validateProductDescription($description_raw);
+    if (!$descCheck['valid']) {
+        echo "<div style='text-align: center; padding: 40px; color: red;'>" . htmlspecialchars($descCheck['message']) . "</div>";
+        exit();
+    }
+
+    $price = $priceCheck['value'];
+    $stock_quantity = $stockCheck['value'];
+    $description = $descCheck['value'];
     
     // Get current image path
     $current_image_query = "SELECT image FROM items WHERE id = ?";
@@ -30,35 +66,29 @@
     $current_image = $current_row['image'] ?? null;
     mysqli_stmt_close($current_stmt);
     
-    $image_path = $current_image; // Keep current image by default
+    $image_path = SecurityHelper::normalizeProductImagePath($current_image); // Keep current image by default
     
-    // Handle image upload if new image is provided
-    if(isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        $max_size = 5 * 1024 * 1024; // 5MB
-        
-        $file_type = $_FILES['image']['type'];
-        $file_size = $_FILES['image']['size'];
-        
-        if(in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            // Create uploads directory if it doesn't exist
-            $upload_dir = 'img/products/';
-            if(!file_exists($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
+    // Handle image upload if new image is provided (optional)
+    if(isset($_FILES['image'])) {
+        $uploadResult = SecurityHelper::validateImageUpload(
+            $_FILES['image'],
+            'img/products/',
+            ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+            5 * 1024 * 1024,
+            false
+        );
+
+        if (!$uploadResult['valid']) {
+            echo "<div style='text-align: center; padding: 40px; color: red;'>" . htmlspecialchars($uploadResult['message']) . "</div>";
+            exit();
+        }
+
+        if (!empty($uploadResult['web_path'])) {
+            $existingPath = SecurityHelper::normalizeProductImagePath($current_image);
+            if($existingPath && file_exists($existingPath)) {
+                @unlink($existingPath);
             }
-            
-            // Generate unique filename
-            $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $file_name = 'product_' . time() . '_' . uniqid() . '.' . $file_extension;
-            $upload_path = $upload_dir . $file_name;
-            
-            if(move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
-                // Delete old image if exists
-                if($current_image && file_exists($current_image)) {
-                    @unlink($current_image);
-                }
-                $image_path = $upload_path;
-            }
+            $image_path = $uploadResult['web_path'];
         }
     }
     
@@ -79,24 +109,29 @@
     $query = "UPDATE items SET name = ?, price = ?, category = ?, description = ?, stock_quantity = ?, image = ?, is_new = ? WHERE id = ?";
     $stmt = mysqli_prepare($con, $query);
     if(!$stmt) {
+        error_log("Update product error: " . mysqli_error($con));
         echo "<div style='text-align: center; padding: 50px;'>";
-        echo "<h2 style='color: red;'>✗ Lỗi khi chuẩn bị câu lệnh SQL: " . mysqli_error($con) . "</h2>";
-        echo "<a href='admin_edit_product.php?id=" . $id . "'>Quay lại</a>";
+        echo "<h2 style='color: red;'>✗ An error occurred while updating the product.</h2>";
+        echo "<a href='admin_edit_product.php?id=" . intval($id) . "'>Go Back</a>";
         echo "</div>";
         exit();
     }
     mysqli_stmt_bind_param($stmt, "sdssissi", $name, $price, $category, $description, $stock_quantity, $image_path, $is_new, $id);
     
     if(mysqli_stmt_execute($stmt)) {
+        // Log security event
+        SecurityHelper::logSecurityEvent($con, 'admin_edit_product', 'Product ID: ' . $id);
+        
         echo "<div style='text-align: center; padding: 50px;'>";
         echo "<h2 style='color: green;'>✓ Cập nhật sản phẩm thành công!</h2>";
         echo "<p>Đang chuyển hướng...</p>";
         echo "</div>";
         echo "<meta http-equiv='refresh' content='2;url=admin_manage_products.php' />";
     } else {
+        error_log("Update product execute error: " . mysqli_stmt_error($stmt));
         echo "<div style='text-align: center; padding: 50px;'>";
-        echo "<h2 style='color: red;'>✗ Lỗi khi cập nhật sản phẩm: " . mysqli_stmt_error($stmt) . "</h2>";
-        echo "<a href='admin_edit_product.php?id=" . $id . "'>Quay lại</a>";
+        echo "<h2 style='color: red;'>✗ Lỗi khi cập nhật sản phẩm. Vui lòng thử lại.</h2>";
+        echo "<a href='admin_edit_product.php?id=" . intval($id) . "'>Quay lại</a>";
         echo "</div>";
     }
     

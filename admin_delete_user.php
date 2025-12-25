@@ -2,10 +2,19 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
-    // Require admin role
-    SecurityHelper::requireAdmin();
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
+        exit();
+    }
     
-    $user_id = intval($_GET['id']);
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !SecurityHelper::verifyCSRFToken($_POST['csrf_token'])) {
+        die('CSRF token validation failed');
+    }
+    
+    $user_id = intval($_POST['id']);
     
     // Verify user exists before attempting to delete
     $verify_query = "SELECT id FROM users WHERE id = ?";
@@ -37,13 +46,17 @@
     $stmt = mysqli_prepare($con, $delete_query);
     
     if (!$stmt) {
-        echo "<script>alert('Database error'); window.location.href='admin_manage_users.php';</script>";
+        error_log("Delete user error: " . mysqli_error($con));
+        echo "<script>alert('An error occurred'); window.location.href='admin_manage_users.php';</script>";
         exit();
     }
     
     mysqli_stmt_bind_param($stmt, "i", $user_id);
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+    
+    // Log security event
+    SecurityHelper::logSecurityEvent($con, 'admin_delete_user', 'User ID: ' . $user_id);
     
     header('location: admin_manage_users.php');
 ?>

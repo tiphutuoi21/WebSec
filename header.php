@@ -101,11 +101,40 @@
     var resultsDiv = document.getElementById('headerSearchResults');
     var searchTimeout;
     
+    // XSS protection: validate search input before submission
+    function isXssPayload(value) {
+        const xssPatterns = [
+            /<script[^>]*>.*?<\/script>/gi,           // Script tags
+            /<iframe[^>]*>.*?<\/iframe>/gi,           // iFrame tags
+            /on\w+\s*=/gi,                             // Event handlers
+            /javascript:/gi,                           // javascript: protocol
+            /data:text\/html/gi,                       // data:text/html protocol
+            /vbscript:/gi,                             // vbscript: protocol
+            /<svg[^>]*on\w+/gi,                        // SVG with event handlers
+            /<img[^>]*on\w+/gi,                        // img with event handlers
+            /<body[^>]*on\w+/gi                        // body with event handlers
+        ];
+        
+        for (let pattern of xssPatterns) {
+            if (pattern.test(value)) {
+                return true; // XSS payload detected
+            }
+        }
+        return false; // Safe
+    }
+    
     if (searchInput && resultsDiv) {
         searchInput.addEventListener('input', function() {
             var query = this.value.trim();
             
             clearTimeout(searchTimeout);
+            
+            // Check for XSS payload
+            if (isXssPayload(query)) {
+                resultsDiv.innerHTML = '<div class="live-search-item no-results">Lỗi: Input chứa nội dung không hợp lệ!</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
             
             if (query.length < 2) {
                 resultsDiv.innerHTML = '';
@@ -146,6 +175,19 @@
                 resultsDiv.style.display = 'none';
             }
         });
+        
+        // Validate form submission
+        var form = searchInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (isXssPayload(searchInput.value)) {
+                    e.preventDefault();
+                    alert('Lỗi: Input chứa nội dung không hợp lệ!');
+                    searchInput.focus();
+                    return false;
+                }
+            });
+        }
     }
     
     function displaySearchResults(results, container, query) {

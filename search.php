@@ -1,6 +1,7 @@
 <?php
     require 'connection.php';
     require 'check_if_added.php';
+    require 'SecurityHelper.php';
     
     // Get search query from POST/GET
     $search_query = '';
@@ -11,33 +12,69 @@
         // Sanitize and validate search input
         $search_query = trim($_POST['search']);
         
+        // Define harmful characters and patterns that should be filtered
+        $harmful_patterns = array(
+            '/<script[^>]*>.*?<\/script>/i',  // Script tags
+            '/<iframe[^>]*>.*?<\/iframe>/i', // iFrame tags
+            '/<img[^>]*on\w+\s*=/i',          // img with event handlers
+            '/<[a-z][a-z0-9]*[^>]*on\w+\s*=/i', // Any tag with event handlers
+            '/<svg[^>]*on\w+\s*=/i',          // SVG with event handlers
+            '/javascript:/i',                  // javascript: protocol
+            '/data:text\/html/i',             // data:text/html protocol
+            '/vbscript:/i',                   // vbscript: protocol
+            '/<body[^>]*on\w+\s*=/i'          // body with event handlers
+        );
+        
         // Check if search query is not empty
         if (strlen($search_query) > 0) {
-            // Validate search length (max 255 characters)
-            if (strlen($search_query) > 255) {
-                $search_query = substr($search_query, 0, 255);
+            // Check for harmful patterns
+            $is_harmful = false;
+            foreach ($harmful_patterns as $pattern) {
+                if (preg_match($pattern, $search_query)) {
+                    $is_harmful = true;
+                    break;
+                }
             }
             
-            // Prepare statement to prevent SQL injection
-            $query = "SELECT * FROM items WHERE name LIKE ? ORDER BY name ASC";
-            $stmt = mysqli_prepare($con, $query);
-            
-            if ($stmt) {
-                // Add wildcards to search term for partial matching
-                $search_term = "%" . $search_query . "%";
-                mysqli_stmt_bind_param($stmt, "s", $search_term);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-                
-                if (mysqli_num_rows($result) > 0) {
-                    while ($product = mysqli_fetch_assoc($result)) {
-                        $search_results[] = $product;
-                    }
-                } else {
-                    $no_results = true;
+            if ($is_harmful) {
+                $no_results = true;
+            } else {
+                // Validate search length (max 255 characters)
+                if (strlen($search_query) > 255) {
+                    $search_query = substr($search_query, 0, 255);
                 }
                 
-                mysqli_stmt_close($stmt);
+                // Remove any remaining special characters that could be harmful
+                // Allow only alphanumeric, spaces, and common Vietnamese characters
+                $search_query = preg_replace('/[^a-zA-Z0-9\p{L}\s\-_.]/u', '', $search_query);
+                $search_query = trim($search_query);
+                
+                // If search query is empty after filtering, return no results
+                if (strlen($search_query) < 1) {
+                    $no_results = true;
+                } else {
+                    // Prepare statement to prevent SQL injection
+                    $query = "SELECT * FROM items WHERE name LIKE ? ORDER BY name ASC";
+                    $stmt = mysqli_prepare($con, $query);
+                    
+                    if ($stmt) {
+                        // Add wildcards to search term for partial matching
+                        $search_term = "%" . $search_query . "%";
+                        mysqli_stmt_bind_param($stmt, "s", $search_term);
+                        mysqli_stmt_execute($stmt);
+                        $result = mysqli_stmt_get_result($stmt);
+                        
+                        if (mysqli_num_rows($result) > 0) {
+                            while ($product = mysqli_fetch_assoc($result)) {
+                                $search_results[] = $product;
+                            }
+                        } else {
+                            $no_results = true;
+                        }
+                        
+                        mysqli_stmt_close($stmt);
+                    }
+                }
             }
         } else {
             $no_results = true;
@@ -157,6 +194,46 @@
                 margin-bottom: 25px;
             }
         </style>
+        <script>
+            // Client-side XSS protection for search form
+            function validateSearchInput(searchValue) {
+                // Define harmful patterns that indicate XSS attempts
+                const xssPatterns = [
+                    /<script[^>]*>.*?<\/script>/gi,           // Script tags
+                    /<iframe[^>]*>.*?<\/iframe>/gi,           // iFrame tags
+                    /on\w+\s*=/gi,                             // Event handlers (onclick, onload, etc.)
+                    /javascript:/gi,                           // javascript: protocol
+                    /data:text\/html/gi,                       // data:text/html protocol
+                    /vbscript:/gi,                             // vbscript: protocol
+                    /<svg[^>]*on\w+/gi,                        // SVG with event handlers
+                    /<img[^>]*on\w+/gi                         // img with event handlers
+                ];
+                
+                // Check if input contains any harmful patterns
+                for (let pattern of xssPatterns) {
+                    if (pattern.test(searchValue)) {
+                        return false; // Harmful content detected
+                    }
+                }
+                return true; // Safe to submit
+            }
+            
+            // Attach validation to search form submission
+            document.addEventListener('DOMContentLoaded', function() {
+                const searchForm = document.querySelector('.search-form');
+                if (searchForm) {
+                    searchForm.addEventListener('submit', function(e) {
+                        const searchInput = document.querySelector('input[name="search"]');
+                        if (searchInput && !validateSearchInput(searchInput.value)) {
+                            e.preventDefault();
+                            alert('Lỗi: Input chứa nội dung không hợp lệ!');
+                            searchInput.focus();
+                            return false;
+                        }
+                    });
+                }
+            });
+        </script>
     </head>
     <body>
         <div>
@@ -210,22 +287,28 @@
                     <div class="row">
                         <?php foreach ($search_results as $product): ?>
                             <?php
-                                // Map product names to image files (same as product.php)
-                                $product_images = array(
-                                    'Cannon EOS' => 'img/cannon_eos.jpg',
-                                    'Sony DSLR' => 'img/sony_dslr.jpeg',
-                                    'Olympus DSLR' => 'img/olympus.jpg',
-                                    'Titan Model #301' => 'img/titan301.jpg',
-                                    'Titan Model #201' => 'img/titan201.jpg',
-                                    'HMT Milan' => 'img/hmt.JPG',
-                                    'Favre Lueba #111' => 'img/favreleuba.jpg',
-                                    'Raymond' => 'img/raymond.jpg',
-                                    'Charles' => 'img/charles.jpg',
-                                    'HXR' => 'img/HXR.jpg',
-                                    'PINK' => 'img/pink.jpg'
-                                );
-                                
-                                $image_path = isset($product_images[$product['name']]) ? $product_images[$product['name']] : 'img/default_product.jpg';
+                                // Use product image from database if available
+                                if (!empty($product['image']) && file_exists($product['image'])) {
+                                    $image_path = $product['image'];
+                                } else {
+                                    // Try to find image by product name
+                                    $image_path = 'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.jpg';
+                                    if (!file_exists($image_path)) {
+                                        // Try with different extensions
+                                        $possible_paths = array(
+                                            'img/' . strtolower(str_replace(' ', '_', $product['name'])) . '.png',
+                                            'img/' . strtolower(str_replace('#', '', str_replace(' ', '_', $product['name']))) . '.jpg',
+                                            'img/camera.jpg' // Default fallback
+                                        );
+                                        $image_path = 'img/camera.jpg';
+                                        foreach($possible_paths as $path) {
+                                            if(file_exists($path)) {
+                                                $image_path = $path;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
                             ?>
                             <div class="col-md-3 col-sm-6">
                                 <div class="product-card">

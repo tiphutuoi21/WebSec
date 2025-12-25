@@ -9,6 +9,6 @@
     // Destroy session securely
     SessionManager::destroySession($con);
     
-    header('location: admin310817.php');
+    header('location: admin_login.php');
     exit();
 ?>

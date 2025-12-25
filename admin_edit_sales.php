@@ -4,7 +4,7 @@
     
     // Require admin login and admin role
     if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+        header('location: admin_login.php');
         exit();
     }
     
@@ -34,8 +34,8 @@
     $success = '';
     
     if($_SERVER['REQUEST_METHOD'] == 'POST'){
-        $email = SecurityHelper::getString($_POST['email']);
-        $password = $_POST['password'];
+        $email = SecurityHelper::getString('email', 'POST');
+        $password = SecurityHelper::getString('password', 'POST');
         $is_active = isset($_POST['is_active']) ? 1 : 0;
         
         // Validation
@@ -59,7 +59,7 @@
                     if(strlen($password) < 8){
                         $error = 'Mật khẩu phải có ít nhất 8 ký tự';
                     } else {
-                        $hashed_password = md5(md5($password));
+                        $hashed_password = password_hash($password, PASSWORD_BCRYPT);
                         $update_query = "UPDATE admins SET email = ?, password = ?, is_active = ? WHERE id = ?";
                         $update_stmt = mysqli_prepare($con, $update_query);
                         mysqli_stmt_bind_param($update_stmt, "ssii", $email, $hashed_password, $is_active, $sales_id);

@@ -3,7 +3,7 @@
     
     // Check if user is logged in
     if(!isset($_SESSION['email'])){
-        header('location: login.php');
+        header('Location: login.php');
         exit();
     }
     
@@ -11,7 +11,7 @@
     
     // Get order ID from URL parameter
     if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
-        header('location: settings.php');
+        header('Location: settings.php');
         exit();
     }
     
@@ -25,7 +25,7 @@
     
     $stmt = mysqli_prepare($con, $order_query);
     if (!$stmt) {
-        header('location: settings.php');
+        header('Location: settings.php');
         exit();
     }
     
@@ -36,7 +36,7 @@
     if(mysqli_num_rows($order_result) == 0){
         // Order doesn't exist or doesn't belong to this user
         mysqli_stmt_close($stmt);
-        header('location: settings.php');
+        header('Location: settings.php');
         exit();
     }
     
@@ -52,7 +52,7 @@
     
     $stmt = mysqli_prepare($con, $items_query);
     if (!$stmt) {
-        header('location: settings.php');
+        header('Location: settings.php');
         exit();
     }
     
@@ -60,9 +60,11 @@
     mysqli_stmt_execute($stmt);
     $items_result = mysqli_stmt_get_result($stmt);
     $order_items = array();
+    $computed_total = 0.00;
     
     while($item = mysqli_fetch_assoc($items_result)){
         $order_items[] = $item;
+        $computed_total = round($computed_total + floatval($item['subtotal']), 2);
     }
     mysqli_stmt_close($stmt);
 ?>
@@ -259,8 +261,8 @@
                                 <tr>
                                     <td class="item-name"><?php echo htmlspecialchars($item['name']); ?></td>
                                     <td style="text-align: center;"><?php echo intval($item['quantity']); ?></td>
-                                    <td style="text-align: right;">Rs. <?php echo number_format($item['unit_price'], 2); ?></td>
-                                    <td style="text-align: right;"><strong>Rs. <?php echo number_format($item['subtotal'], 2); ?></strong></td>
+                                    <td style="text-align: right;">₫ <?php echo number_format($item['unit_price'], 0); ?></td>
+                                    <td style="text-align: right;"><strong>₫ <?php echo number_format($item['subtotal'], 0); ?></strong></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -271,7 +273,7 @@
                 <div class="summary-section">
                     <div class="summary-row">
                         <span>Subtotal:</span>
-                        <span>Rs. <?php echo number_format($order['total_amount'], 2); ?></span>
+                        <span>₫ <?php echo number_format($computed_total, 0); ?></span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping:</span>
@@ -283,7 +285,7 @@
                     </div>
                     <div class="summary-row">
                         <span>Total:</span>
-                        <span>Rs. <?php echo number_format($order['total_amount'], 2); ?></span>
+                        <span>₫ <?php echo number_format($computed_total, 0); ?></span>
                     </div>
                 </div>
                 

@@ -1,12 +1,13 @@
 <?php
     require 'connection.php';
+    require 'SecurityHelper.php';
     require 'check_if_added.php';
     
     // Get product ID from URL
     $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
     
     if ($product_id <= 0) {
-        header('location: products.php');
+        header('Location: products.php');
         exit;
     }
     
@@ -18,7 +19,7 @@
     $result = mysqli_stmt_get_result($stmt);
     
     if (mysqli_num_rows($result) == 0) {
-        header('location: products.php');
+        header('Location: products.php');
         exit;
     }
     
@@ -255,8 +256,9 @@
                                 );
                                 
                                 // Priority 1: Use product image from database if available
-                                if (!empty($product['image']) && file_exists($product['image'])) {
-                                    $image_path = $product['image'];
+                                $dbImagePath = SecurityHelper::normalizeProductImagePath($product['image']);
+                                if (!empty($dbImagePath) && file_exists($dbImagePath)) {
+                                    $image_path = $dbImagePath;
                                 } 
                                 // Priority 2: Try mapping by product name
                                 elseif (isset($product_images[$product['name']]) && file_exists($product_images[$product['name']])) {
@@ -403,6 +405,12 @@
             </div>
         </div>
         
+        <form id="addToCartForm" method="POST" action="cart_add.php" style="display:none;">
+            <?php echo SecurityHelper::getCSRFField(); ?>
+            <input type="hidden" name="id" id="cart_product_id" value="">
+            <input type="hidden" name="quantity" id="cart_quantity" value="">
+        </form>
+
         <script>
             function addToCart(productId) {
                 var quantity = document.getElementById('quantity').value;
@@ -412,9 +420,11 @@
                     alert('Please enter a valid quantity between 1 and 100');
                     return;
                 }
-                
-                // Redirect to cart_add.php with quantity parameter
-                window.location.href = 'cart_add.php?id=' + productId + '&quantity=' + quantity;
+
+                // Submit via POST with CSRF token
+                document.getElementById('cart_product_id').value = productId;
+                document.getElementById('cart_quantity').value = quantity;
+                document.getElementById('addToCartForm').submit();
             }
             
             // Ensure quantity input is always numeric and positive

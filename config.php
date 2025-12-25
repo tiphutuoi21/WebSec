@@ -1,4 +1,8 @@
 <?php
+// Set PHP timezone to match server location (Vietnam/SE Asia)
+// Windows shows: SE Asia Standard Time = UTC+7
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 // Load environment variables from .env file
 $env_file = __DIR__ . '/.env';
 if (file_exists($env_file)) {

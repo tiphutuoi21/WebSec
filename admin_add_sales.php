@@ -4,7 +4,7 @@
     
     // Require admin login and admin role
     if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+        header('location: admin_login.php');
         exit();
     }
     
@@ -17,9 +17,9 @@
     $success = '';
     
     if($_SERVER['REQUEST_METHOD'] == 'POST'){
-        $email = SecurityHelper::getString($_POST['email']);
-        $password = $_POST['password'];
-        $confirm_password = $_POST['confirm_password'];
+        $email = SecurityHelper::getString('email', 'POST');
+        $password = SecurityHelper::getString('password', 'POST');
+        $confirm_password = SecurityHelper::getString('confirm_password', 'POST');
         
         // Validation
         if(empty($email) || empty($password) || empty($confirm_password)){
@@ -41,8 +41,8 @@
             if(mysqli_num_rows($check_result) > 0){
                 $error = 'Email này đã được sử dụng';
             } else {
-                // Hash password
-                $hashed_password = md5(md5($password));
+                // Hash password with bcrypt
+                $hashed_password = password_hash($password, PASSWORD_BCRYPT);
                 
                 // Insert new sales account (role_id = 2 for sales_manager)
                 $insert_query = "INSERT INTO admins (email, password, role_id, is_active) VALUES (?, ?, 2, 1)";

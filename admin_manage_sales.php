@@ -2,15 +2,10 @@
     require 'connection.php';
     require 'SecurityHelper.php';
     
-    // Require admin login and admin role (only admin can manage sales)
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
-        exit();
-    }
-    
-    // Only admin (role_id = 1) can manage sales
-    if(intval($_SESSION['admin_role_id']) !== 1){
-        echo "<script>alert('Chỉ Admin mới có quyền quản lý tài khoản Sales'); window.location.href='admin_dashboard.php';</script>";
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
         exit();
     }
     
@@ -38,6 +33,7 @@
             <div class="admin-nav">
                 <h3>Admin Dashboard (<?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'])); ?>)</h3>
                 <a href="admin_dashboard.php">Dashboard</a>
+                <a href="admin_orders.php">View Orders</a>
                 <a href="admin_manage_users.php">Manage Users</a>
                 <a href="admin_manage_products.php">Manage Products</a>
                 <a href="admin_manage_sales.php">Manage Sales</a>

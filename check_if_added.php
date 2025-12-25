@@ -1,28 +1,31 @@
 <?php
-    
-    function check_if_added_to_cart($item_id){
-        require 'connection.php';
-        
-        if(!isset($_SESSION['id'])){
-            return 0;
-        }
-        
-        $user_id = $_SESSION['id'];
-        
-        // Check in the new cart_items table
-        $product_check_query = "SELECT * FROM cart_items WHERE item_id = ? AND user_id = ?";
-        $stmt = mysqli_prepare($con, $product_check_query);
-        
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "ii", $item_id, $user_id);
-            mysqli_stmt_execute($stmt);
-            $product_check_result = mysqli_stmt_get_result($stmt);
-            $num_rows = mysqli_num_rows($product_check_result);
-            mysqli_stmt_close($stmt);
-            
-            if($num_rows >= 1) return 1;
-        }
-        
-        return 0;
+/**
+ * Check if Product is Already in Cart
+ * Used in product pages to disable "Add to Cart" button if item is already in cart
+ */
+
+function check_if_added_to_cart($item_id) {
+    // If user is not logged in, item is not in cart
+    if (!isset($_SESSION['id'])) {
+        return false;
     }
+    
+    $user_id = $_SESSION['id'];
+    global $con;
+    
+    // Check if item exists in cart_items for this user
+    $check_query = "SELECT id FROM cart_items WHERE user_id = ? AND item_id = ?";
+    $stmt = mysqli_prepare($con, $check_query);
+    
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ii", $user_id, $item_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $exists = mysqli_num_rows($result) > 0;
+        mysqli_stmt_close($stmt);
+        return $exists;
+    }
+    
+    return false;
+}
 ?>

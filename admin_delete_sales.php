@@ -4,7 +4,7 @@
     
     // Require admin login and admin role
     if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
+        header('location: admin_login.php');
         exit();
     }
     

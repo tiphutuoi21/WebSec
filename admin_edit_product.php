@@ -1,11 +1,13 @@
 <?php
     require 'connection.php';
-    
-    if(!isset($_SESSION['admin_email'])){
-        header('location: admin310817.php');
-    }
-    
     require 'SecurityHelper.php';
+    
+    // Validate session and check admin access
+    SecurityHelper::validateSessionTimeout($con);
+    if(!isset($_SESSION['admin_email']) || intval($_SESSION['admin_role_id'] ?? 0) !== 1) {
+        header('location: admin_login.php');
+        exit();
+    }
     
     $product_id = intval($_GET['id']);
     $product_query = "SELECT * FROM items WHERE id = ?";
@@ -50,6 +52,7 @@
                         </div>
                         <div class="panel-body">
                             <form method="post" action="admin_edit_product_submit.php" enctype="multipart/form-data">
+                                <?php echo SecurityHelper::getCSRFField(); ?>
                                 <input type="hidden" name="id" value="<?php echo $product['id']; ?>">
                                 
                                 <div class="form-group">

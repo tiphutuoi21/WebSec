@@ -1,6 +1,9 @@
 <?php
     require 'connection.php';
     require 'SecurityHelper.php';
+
+    // Ensure UUID column exists for users
+    SecurityHelper::ensureUserUidColumn($con);
     
     // Verify CSRF token
     if (!isset($_POST['csrf_token']) || !SecurityHelper::verifyCSRFToken($_POST['csrf_token'])) {
@@ -10,6 +13,19 @@
     // Get and sanitize input
     $email = SecurityHelper::getString('email', 'POST');
     $password = SecurityHelper::getString('password', 'POST');
+    
+    // Check rate limiting
+    if (!SecurityHelper::checkRateLimit($email, 5, 300)) {
+        // Too many failed attempts
+        error_log("Rate limit exceeded for login: " . $email);
+        ?>
+        <script>
+            window.alert("Too many failed login attempts. Please try again in 5 minutes.");
+        </script>
+        <meta http-equiv="refresh" content="1;url=login.php" />
+        <?php
+        exit();
+    }
     
     // Validate email format
     if (!SecurityHelper::isValidEmail($email)) {
@@ -29,24 +45,25 @@
         exit();
     }
     
-    // Hash password (use prepared statement with hashed password)
-    $password_hash = md5(md5($password));
-    
     // Use prepared statement to prevent SQL injection
-    $user_authentication_query = "SELECT id, email, email_verified FROM users WHERE email = ? AND password = ?";
+    // Note: We fetch the stored hash and verify it with password_verify() instead of hashing in SQL
+    $user_authentication_query = "SELECT id, email, email_verified, password, user_uid FROM users WHERE email = ?";
     $stmt = mysqli_prepare($con, $user_authentication_query);
     
     if (!$stmt) {
-        die('Database error: ' . htmlspecialchars(mysqli_error($con)));
+        error_log("Database query error in login_submit.php: " . mysqli_error($con));
+        echo "An error occurred during login. Please try again later.";
+        exit();
     }
     
-    mysqli_stmt_bind_param($stmt, "ss", $email, $password_hash);
+    mysqli_stmt_bind_param($stmt, "s", $email);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     
     if(mysqli_num_rows($result) == 0) {
         // Log failed login attempt
         SecurityHelper::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
+        SecurityHelper::recordFailedAttempt($email);
         ?>
         <script>
             window.alert("Wrong username or password");
@@ -56,52 +73,64 @@
     } else {
         $row = mysqli_fetch_array($result);
         
-        // Check if email is verified
-        // If email is not verified, check if PHPMailer is available
-        // If PHPMailer is not available, auto-verify and allow login
-        if($row['email_verified'] == 0) {
-            // Check if PHPMailer is available
-            $vendor_autoload = __DIR__ . '/vendor/autoload.php';
-            $phpmailer_available = file_exists($vendor_autoload) && class_exists('PHPMailer\PHPMailer\PHPMailer');
-            
-            if ($phpmailer_available) {
-                // PHPMailer is available - require email verification
+        // Verify password using bcrypt
+        $stored_hash = $row['password'];
+        $password_correct = password_verify($password, $stored_hash);
+        
+        if (!$password_correct) {
+            // Log failed login attempt
+            SecurityHelper::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
+            SecurityHelper::recordFailedAttempt($email);
+            ?>
+            <script>
+                window.alert("Wrong username or password");
+            </script>
+            <meta http-equiv="refresh" content="1;url=login.php" />
+            <?php
+        } else {
+            // Check if email is verified - REQUIRED for login
+            if($row['email_verified'] == 0) {
+                // Email not verified - block login
                 SecurityHelper::logSecurityEvent($con, 'unverified_login_attempt', 'Email: ' . $email);
                 ?>
                 <script>
-                    window.alert("Vui lòng xác thực email trước khi đăng nhập. Kiểm tra email của bạn để tìm link xác thực.");
+                    window.alert("Vui lòng xác thực email trước khi đăng nhập. Kiểm tra email của bạn để tìm link xác thực. Nếu bạn không nhận được email, vui lòng kiểm tra thư mục spam hoặc đăng ký lại.");
                 </script>
                 <meta http-equiv="refresh" content="1;url=login.php" />
                 <?php
-            } else {
-                // PHPMailer not available - auto-verify and allow login
-                $auto_verify_query = "UPDATE users SET email_verified = 1 WHERE id = ?";
-                $auto_verify_stmt = mysqli_prepare($con, $auto_verify_query);
-                if ($auto_verify_stmt) {
-                    mysqli_stmt_bind_param($auto_verify_stmt, "i", $row['id']);
-                    mysqli_stmt_execute($auto_verify_stmt);
-                    mysqli_stmt_close($auto_verify_stmt);
-                }
-                
-                // Create secure session for user
-                SessionManager::createUserSession($con, $row['id'], $email, 3, 'customer');
-                
-                // Log successful login
-                SecurityHelper::logSecurityEvent($con, 'customer_login', 'Successful login (auto-verified)');
-                
-                header('location: products.php');
                 exit();
+            } else {
+                // Email is verified - proceed with normal login
+                // Ensure user has UUID
+                $user_uuid = $row['user_uid'] ?? null;
+                if (empty($user_uuid)) {
+                    $user_uuid = SecurityHelper::ensureUserUuid($con, $row['id']);
+                }
+
+                // Create secure session for user
+                if (SessionManager::createUserSession($con, $row['id'], $email, 3, 'customer', $user_uuid)) {
+                    // Clear failed login attempts on successful login
+                    SecurityHelper::clearFailedAttempts($email);
+                    
+                    // Log successful login
+                    SecurityHelper::logSecurityEvent($con, 'customer_login', 'Successful login');
+                    
+                    // Ensure session is written before redirect
+                    session_write_close();
+                    
+                    header('Location: products.php');
+                    exit();
+                } else {
+                    // Session creation failed
+                    error_log("Session creation failed for user: " . $email);
+                    ?>
+                    <script>
+                        window.alert("Session creation failed. Please try again.");
+                    </script>
+                    <meta http-equiv="refresh" content="2;url=login.php" />
+                    <?php
+                }
             }
-        } else {
-            // Email is verified - proceed with normal login
-            // Create secure session for user
-            SessionManager::createUserSession($con, $row['id'], $email, 3, 'customer');
-            
-            // Log successful login
-            SecurityHelper::logSecurityEvent($con, 'customer_login', 'Successful login');
-            
-            header('location: products.php');
-            exit();
         }
     }
     

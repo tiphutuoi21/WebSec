@@ -1,5 +1,6 @@
 <?php
     require 'connection.php';
+    require 'SecurityHelper.php';
 ?>
 <!DOCTYPE html>
 <html>
@@ -26,6 +27,9 @@
                             <div class="panel-body">
                                 <p>Login to access admin dashboard.</p>
                                 <form method="post" action="admin_login_submit.php">
+                                    <!-- CSRF Token for protection -->
+                                    <?php echo SecurityHelper::getCSRFField(); ?>
+                                    
                                     <div class="form-group">
                                         <input type="email" class="form-control" name="email" placeholder="Email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$" required>
                                     </div>

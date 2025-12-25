@@ -4,40 +4,46 @@
     
     // Check if user is logged in
     SecurityHelper::requireLogin();
+    SecurityHelper::validateSessionTimeout($con);
     
-    // Get order details
-    if(!isset($_SESSION['order_id'])){
-        header('location: index.php');
+    // Get order details by UUID if available, fallback to numeric ID
+    if(!isset($_SESSION['order_uid']) && !isset($_SESSION['order_id'])){
+        header('Location: index.php');
         exit();
     }
     
-    $order_id = intval($_SESSION['order_id']);
+    $order_uid = $_SESSION['order_uid'] ?? null;
+    $order_id = isset($_SESSION['order_id']) ? intval($_SESSION['order_id']) : 0;
     $user_id = SecurityHelper::getUserId();
     
-    // Verify user owns this order (prevent direct object reference abuse)
-    if (!SecurityHelper::verifyResourceOwnership($con, 'order', $order_id, $user_id)) {
-        echo "<script>alert('Unauthorized access to order'); window.location.href='products.php';</script>";
-        exit();
+    // Fetch order details with prepared statement and ownership validation
+    if ($order_uid) {
+        $order_query = "SELECT o.id, o.order_uid, o.created_at, o.total_amount, os.name as status_name
+                       FROM orders o
+                       INNER JOIN order_statuses os ON os.id = o.status_id
+                       WHERE o.order_uid = ? AND o.user_id = ?";
+        $stmt = mysqli_prepare($con, $order_query);
+        mysqli_stmt_bind_param($stmt, "si", $order_uid, $user_id);
+    } else {
+        $order_query = "SELECT o.id, o.order_uid, o.created_at, o.total_amount, os.name as status_name
+                       FROM orders o
+                       INNER JOIN order_statuses os ON os.id = o.status_id
+                       WHERE o.id = ? AND o.user_id = ?";
+        $stmt = mysqli_prepare($con, $order_query);
+        mysqli_stmt_bind_param($stmt, "ii", $order_id, $user_id);
     }
-    
-    // Fetch order details with prepared statement
-    $order_query = "SELECT o.id, o.created_at, o.total_amount, os.name as status_name
-                   FROM orders o
-                   INNER JOIN order_statuses os ON os.id = o.status_id
-                   WHERE o.id = ? AND o.user_id = ?";
-    
-    $stmt = mysqli_prepare($con, $order_query);
-    mysqli_stmt_bind_param($stmt, "ii", $order_id, $user_id);
     mysqli_stmt_execute($stmt);
     $order_result = mysqli_stmt_get_result($stmt);
     mysqli_stmt_close($stmt);
     
     if(mysqli_num_rows($order_result) == 0){
-        header('location: index.php');
+        header('Location: index.php');
         exit();
     }
     
     $order = mysqli_fetch_array($order_result);
+    $order_id = intval($order['id']);
+    $order_uid = $order['order_uid'] ?? $order_uid;
     
     // Fetch order items with prepared statement
     $items_query = "SELECT oi.item_id, oi.quantity, oi.unit_price, oi.subtotal, i.name, i.image
@@ -49,6 +55,12 @@
     mysqli_stmt_bind_param($stmt, "i", $order_id);
     mysqli_stmt_execute($stmt);
     $items_result = mysqli_stmt_get_result($stmt);
+    $items = [];
+    $computed_total = 0.00;
+    while ($row = mysqli_fetch_assoc($items_result)) {
+        $items[] = $row;
+        $computed_total = round($computed_total + floatval($row['subtotal']), 2);
+    }
     mysqli_stmt_close($stmt);
 ?>
 <!DOCTYPE html>
@@ -100,7 +112,7 @@
                             <table class="table table-bordered">
                                 <tr>
                                     <td><strong>Order ID:</strong></td>
-                                    <td><?php echo $order['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($order_uid ?? $order['id']); ?></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Order Date:</strong></td>
@@ -112,7 +124,7 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Total Amount:</strong></td>
-                                    <td><strong>Rs <?php echo number_format($order['total_amount'], 2); ?></strong></td>
+                                    <td><strong>₫ <?php echo number_format($computed_total, 0); ?></strong></td>
                                 </tr>
                             </table>
                         </div>
@@ -130,18 +142,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php
-                                        while($item = mysqli_fetch_array($items_result)){
-                                            ?>
-                                            <tr>
-                                                <td><?php echo $item['name']; ?></td>
-                                                <td><?php echo $item['quantity']; ?></td>
-                                                <td>Rs <?php echo number_format($item['unit_price'], 2); ?></td>
-                                                <td>Rs <?php echo number_format($item['subtotal'], 2); ?></td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    ?>
+                                    <?php foreach ($items as $item): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($item['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo intval($item['quantity']); ?></td>
+                                            <td>₫ <?php echo number_format($item['unit_price'], 0); ?></td>
+                                            <td>₫ <?php echo number_format($item['subtotal'], 0); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>

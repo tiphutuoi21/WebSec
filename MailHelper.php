@@ -30,6 +30,15 @@ class MailHelper {
             return false;
         }
         
+        // Validate Gmail credentials are configured
+        $gmail_email = GMAIL_EMAIL;
+        $gmail_password = GMAIL_PASSWORD;
+        
+        if (empty($gmail_email) || empty($gmail_password)) {
+            error_log("Gmail credentials not configured in .env file");
+            return false;
+        }
+        
         try {
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             
@@ -37,8 +46,8 @@ class MailHelper {
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = GMAIL_EMAIL;
-            $mail->Password = GMAIL_PASSWORD;
+            $mail->Username = $gmail_email;
+            $mail->Password = str_replace(' ', '', $gmail_password); // Remove spaces from app password
             $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->SMTPOptions = array(
@@ -50,9 +59,9 @@ class MailHelper {
             );
             
             // Recipients
-            $mail->setFrom(GMAIL_EMAIL, GMAIL_FROM_NAME);
+            $mail->setFrom($gmail_email, GMAIL_FROM_NAME);
             $mail->addAddress($email, $name);
-            $mail->addReplyTo(GMAIL_EMAIL, GMAIL_FROM_NAME);
+            $mail->addReplyTo($gmail_email, GMAIL_FROM_NAME);
             
             // Content
             $mail->isHTML(true);
@@ -64,10 +73,11 @@ class MailHelper {
             $mail->AltBody = "Please verify your email by clicking this link: " . $verification_link;
             
             $mail->send();
+            error_log("Verification email sent successfully to: $email");
             return true;
             
         } catch (\Exception $e) {
-            error_log("PHPMailer Error: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
+            error_log("PHPMailer Error for $email: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
             return false;
         }
     }
@@ -87,14 +97,23 @@ class MailHelper {
             return false;
         }
         
+        // Validate Gmail credentials are configured
+        $gmail_email = GMAIL_EMAIL;
+        $gmail_password = GMAIL_PASSWORD;
+        
+        if (empty($gmail_email) || empty($gmail_password)) {
+            error_log("Gmail credentials not configured in .env file");
+            return false;
+        }
+        
         try {
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = GMAIL_EMAIL;
-            $mail->Password = GMAIL_PASSWORD;
+            $mail->Username = $gmail_email;
+            $mail->Password = str_replace(' ', '', $gmail_password); // Remove spaces from app password
             $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->SMTPOptions = array(
@@ -105,9 +124,9 @@ class MailHelper {
                 )
             );
             
-            $mail->setFrom(GMAIL_EMAIL, GMAIL_FROM_NAME);
+            $mail->setFrom($gmail_email, GMAIL_FROM_NAME);
             $mail->addAddress($email, $name);
-            $mail->addReplyTo(GMAIL_EMAIL, GMAIL_FROM_NAME);
+            $mail->addReplyTo($gmail_email, GMAIL_FROM_NAME);
             $mail->isHTML(true);
             $mail->Subject = 'Welcome to Figure Shop!';
             $mail->Body = "
@@ -143,10 +162,11 @@ class MailHelper {
             $mail->AltBody = "Welcome to Figure Shop, " . htmlspecialchars($name) . "!";
             
             $mail->send();
+            error_log("Welcome email sent successfully to: $email");
             return true;
             
         } catch (\Exception $e) {
-            error_log("PHPMailer Error: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
+            error_log("PHPMailer Error for $email: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
             return false;
         }
     }
@@ -190,6 +210,111 @@ class MailHelper {
             </html>
         ";
     }
+    
+    public static function sendPasswordChangeOTP($email, $name, $otp) {
+        // Check if PHPMailer is available
+        global $phpmailer_available;
+        if (!isset($phpmailer_available) || !$phpmailer_available) {
+            // PHPMailer not available
+            error_log("PHPMailer not available - OTP email skipped for: $email");
+            return false;
+        }
+        
+        // Check if class exists before using it
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            error_log("PHPMailer class not found - OTP email skipped for: $email");
+            return false;
+        }
+        
+        // Validate Gmail credentials are configured
+        $gmail_email = GMAIL_EMAIL;
+        $gmail_password = GMAIL_PASSWORD;
+        
+        if (empty($gmail_email) || empty($gmail_password)) {
+            error_log("Gmail credentials not configured in .env file");
+            return false;
+        }
+        
+        try {
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = $gmail_email;
+            $mail->Password = str_replace(' ', '', $gmail_password); // Remove spaces from app password
+            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => false
+                )
+            );
+            
+            // Recipients
+            $mail->setFrom($gmail_email, GMAIL_FROM_NAME);
+            $mail->addAddress($email, $name);
+            $mail->addReplyTo($gmail_email, GMAIL_FROM_NAME);
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Password Change Verification - Figure Shop';
+            
+            $mail->Body = self::getPasswordChangeOTPTemplate($name, $otp);
+            $mail->AltBody = "Your password change OTP is: $otp\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore.";
+            
+            $mail->send();
+            error_log("OTP email sent successfully to: $email");
+            return true;
+            
+        } catch (\Exception $e) {
+            error_log("PHPMailer Error for $email: " . (isset($mail) ? $mail->ErrorInfo : $e->getMessage()));
+            return false;
+        }
+    }
+    
+    private static function getPasswordChangeOTPTemplate($name, $otp) {
+        return "
+            <html>
+            <body style='font-family: Arial, sans-serif; background-color: #f4f4f4;'>
+                <div style='max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                    <div class='header' style='border-bottom: 3px solid #007bff; padding-bottom: 20px; margin-bottom: 20px;'>
+                        <h2 style='color: #007bff; margin: 0;'>Figure Shop - Password Change Verification</h2>
+                    </div>
+                    <div class='content' style='color: #333;'>
+                        <p>Hello <strong>" . htmlspecialchars($name) . "</strong>,</p>
+                        <p>You requested to change your password. To complete this action, please use the following One-Time Password (OTP):</p>
+                        
+                        <div style='background-color: #f9f9f9; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0; text-align: center;'>
+                            <p style='margin: 0; font-size: 14px; color: #666;'>Your OTP:</p>
+                            <h3 style='margin: 10px 0; font-size: 32px; letter-spacing: 3px; color: #007bff; font-family: monospace;'>$otp</h3>
+                            <p style='margin: 10px 0; font-size: 12px; color: #999;'><strong>This code expires in 10 minutes</strong></p>
+                        </div>
+                        
+                        <p><strong>Important Security Note:</strong></p>
+                        <ul>
+                            <li>Never share this OTP with anyone</li>
+                            <li>Figure Shop staff will never ask for your OTP</li>
+                            <li>This OTP is valid for only 1 minute</li>
+                            <li>If you did not request a password change, please ignore this email</li>
+                        </ul>
+                        
+                        <p style='margin-top: 30px; color: #999; font-size: 11px;'>
+                            This is an automated message, please do not reply to this email.
+                        </p>
+                    </div>
+                    <div class='footer' style='border-top: 1px solid #ddd; padding-top: 15px; margin-top: 20px; text-align: center; color: #666;'>
+                        <p>&copy; Figure Shop. All Rights Reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ";
+    }
 }
 ?>
+
 
