@@ -10,11 +10,39 @@
         die('CSRF token validation failed');
     }
     
+    // ===== BUFFER OVERFLOW PREVENTION =====
+    // Validate input lengths before processing
+    $emailCheck = SecurityEnhancements::limitInputLength($_POST['email'] ?? '', SecurityEnhancements::MAX_EMAIL_LENGTH, 'Email');
+    $passwordCheck = SecurityEnhancements::limitInputLength($_POST['password'] ?? '', SecurityEnhancements::MAX_PASSWORD_LENGTH, 'Password');
+    
+    if (!$emailCheck['valid'] || !$passwordCheck['valid']) {
+        SecurityEnhancements::logSecurityViolation('buffer_overflow_attempt', 'Login input too long');
+        echo "Invalid input length. Redirecting...";
+        ?>
+        <meta http-equiv="refresh" content="2;url=login.php" />
+        <?php
+        exit();
+    }
+    
     // Get and sanitize input
     $email = SecurityHelper::getString('email', 'POST');
     $password = SecurityHelper::getString('password', 'POST');
     
-    // Check rate limiting
+    // ===== DoS PREVENTION - Advanced Rate Limiting =====
+    if (!SecurityEnhancements::checkAdvancedRateLimit($con, 'login', $email)) {
+        // Too many failed attempts - add delay
+        SecurityEnhancements::throttleRequest(6); // 32 second delay
+        error_log("Rate limit exceeded for login: " . $email);
+        ?>
+        <script>
+            window.alert("Too many failed login attempts. Please try again in 5 minutes.");
+        </script>
+        <meta http-equiv="refresh" content="1;url=login.php" />
+        <?php
+        exit();
+    }
+    
+    // Check rate limiting (legacy - keep for backwards compatibility)
     if (!SecurityHelper::checkRateLimit($email, 5, 300)) {
         // Too many failed attempts
         error_log("Rate limit exceeded for login: " . $email);

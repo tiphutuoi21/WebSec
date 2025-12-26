@@ -6,28 +6,49 @@ if (session_status() === PHP_SESSION_NONE) {
     SessionManager::initializeSecureSession();
 }
 
-// Now establish database connection
-$con = mysqli_connect("localhost", "root", "", "store") or die(mysqli_error($con));
+// Load security enhancements
+require_once __DIR__ . '/SecurityEnhancements.php';
+
+// Validate request size to prevent DoS
+SecurityEnhancements::validateRequestSize();
+
+// Now establish database connection with error handling
+// Note: In production, credentials should be loaded from environment variables
+$db_host = getenv('DB_HOST') ?: 'localhost';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASS') ?: 'tuanduongne2004';
+$db_name = getenv('DB_NAME') ?: 'store';
+
+$con = @mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+if (!$con) {
+    error_log("Database connection failed: " . mysqli_connect_error());
+    die("Service temporarily unavailable. Please try again later.");
+}
 
 // Set charset for database connection
-mysqli_set_charset($con, "utf8");
+mysqli_set_charset($con, "utf8mb4");
 
 // Set database timezone to match PHP timezone (Asia/Ho_Chi_Minh = UTC+7)
 // This ensures NOW() function uses same timezone as PHP time functions
 mysqli_query($con, "SET time_zone = '+07:00'");
 
+// Run pending database migrations (auto-patch unpatched database)
+SecurityEnhancements::runPendingMigrations($con);
+
 // Add security headers (prevent MIME sniffing, clickjacking, XSS)
 if (!headers_sent()) {
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');
+    header('X-XSS-Protection: 1; mode=block');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Content-Type: text/html; charset=utf-8');
+    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
     // Content Security Policy tuned for current assets (allows inline scripts/styles already present)
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self';");
     // Enable HSTS when using HTTPS
     $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
     if ($is_https) {
-        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
     }
 }
 ?>
