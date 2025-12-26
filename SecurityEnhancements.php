@@ -192,17 +192,71 @@ class SecurityEnhancements {
     /**
      * Log security violation
      */
-    public static function logSecurityViolation($type, $details = '') {
+    public static function logSecurityViolation($type, $details = '', $con = null) {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $user = $_SESSION['email'] ?? 'anonymous';
+        
+        // 1. Log to file (Backup)
         $logEntry = sprintf(
             "[%s] SECURITY VIOLATION - Type: %s, IP: %s, User: %s, Details: %s\n",
             date('Y-m-d H:i:s'),
             $type,
-            $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            $_SESSION['email'] ?? 'anonymous',
+            $ip,
+            $user,
             $details
         );
-        
         error_log($logEntry, 3, __DIR__ . '/logs/security.log');
+
+        // 2. Log to Database (Primary)
+        if ($con) {
+            self::ensureSecurityViolationsTable($con);
+            $stmt = mysqli_prepare($con, 
+                "INSERT INTO security_violations (ip_address, violation_type, details, created_at) 
+                 VALUES (?, ?, ?, NOW())");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "sss", $ip, $type, $details);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+            }
+        }
+    }
+
+    /**
+     * Log general security event (Audit Trail)
+     */
+    public static function logSecurityEvent($con, $eventType, $details = '') {
+        $userId = $_SESSION['id'] ?? null;
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+
+        // Ensure table exists
+        $query = "CREATE TABLE IF NOT EXISTS security_audit_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            event_type VARCHAR(100) NOT NULL,
+            user_id INT,
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            details TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_event_type (event_type),
+            INDEX idx_user_id (user_id),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB";
+        
+        try {
+            @mysqli_query($con, $query);
+        } catch (Exception $e) {}
+
+        // Insert log
+        $stmt = mysqli_prepare($con, 
+            "INSERT INTO security_audit_log (event_type, user_id, ip_address, user_agent, details, created_at) 
+             VALUES (?, ?, ?, ?, ?, NOW())");
+             
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "sisss", $eventType, $userId, $ip, $userAgent, $details);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+        }
     }
     
     // ==================== 3. DENIAL OF SERVICE (DoS) PREVENTION ====================
@@ -289,7 +343,11 @@ class SecurityEnhancements {
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB";
         
-        @mysqli_query($con, $query);
+        try {
+            @mysqli_query($con, $query);
+        } catch (mysqli_sql_exception $e) {
+            // Ignore permission denied errors if table exists
+        }
     }
     
     /**
@@ -349,7 +407,14 @@ class SecurityEnhancements {
             INDEX idx_version (version)
         ) ENGINE=InnoDB";
         
-        return @mysqli_query($con, $query);
+        try {
+            return @mysqli_query($con, $query);
+        } catch (mysqli_sql_exception $e) {
+            // If permission denied (1142), we assume we are running as a restricted user.
+            // We cannot create the table, but we should check if it exists.
+            // If it doesn't exist, subsequent queries will fail, but we avoid the Fatal Error here.
+            return false;
+        }
     }
     
     /**
@@ -374,7 +439,16 @@ class SecurityEnhancements {
     public static function applyMigration($con, $version, $sql, $description = '') {
         // Check if already applied
         $checkQuery = "SELECT id FROM db_migrations WHERE version = ?";
-        $stmt = mysqli_prepare($con, $checkQuery);
+        
+        try {
+            $stmt = @mysqli_prepare($con, $checkQuery);
+            if (!$stmt) {
+                return ['success' => false, 'message' => 'Migration table not accessible'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Migration table not accessible: ' . $e->getMessage()];
+        }
+
         mysqli_stmt_bind_param($stmt, "s", $version);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
@@ -898,7 +972,11 @@ class SecurityEnhancements {
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB";
         
-        @mysqli_query($con, $query);
+        try {
+            @mysqli_query($con, $query);
+        } catch (mysqli_sql_exception $e) {
+            // Ignore permission denied errors if table exists
+        }
     }
     
     /**
@@ -1026,7 +1104,11 @@ class SecurityEnhancements {
             INDEX idx_expires (expires_at)
         ) ENGINE=InnoDB";
         
-        @mysqli_query($con, $query);
+        try {
+            @mysqli_query($con, $query);
+        } catch (mysqli_sql_exception $e) {
+            // Ignore permission denied errors if table exists
+        }
     }
     
     /**
@@ -1043,7 +1125,11 @@ class SecurityEnhancements {
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB";
         
-        @mysqli_query($con, $query);
+        try {
+            @mysqli_query($con, $query);
+        } catch (mysqli_sql_exception $e) {
+            // Ignore permission denied errors if table exists
+        }
     }
     
     /**

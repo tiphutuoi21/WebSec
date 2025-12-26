@@ -15,11 +15,19 @@ SecurityEnhancements::validateRequestSize();
 // Now establish database connection with error handling
 // Note: In production, credentials should be loaded from environment variables
 $db_host = getenv('DB_HOST') ?: 'localhost';
-$db_user = getenv('DB_USER') ?: 'root';
-$db_pass = getenv('DB_PASS') ?: 'tuanduongne2004';
 $db_name = getenv('DB_NAME') ?: 'store';
 
-$con = @mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+// Try connecting with secure user first (Privilege Escalation Prevention)
+// This user should have limited privileges (SELECT, INSERT, UPDATE, DELETE only)
+$con = @mysqli_connect($db_host, 'websec_user', 'WebSec@2024Secure', $db_name);
+
+// If failed, fallback to root (Development/Migration compatibility)
+if (!$con) {
+    $db_user = getenv('DB_USER') ?: 'root';
+    $db_pass = getenv('DB_PASS') ?: 'tuanduongne2004';
+    $con = @mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+}
+
 if (!$con) {
     error_log("Database connection failed: " . mysqli_connect_error());
     die("Service temporarily unavailable. Please try again later.");

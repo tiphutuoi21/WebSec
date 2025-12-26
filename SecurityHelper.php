@@ -655,7 +655,11 @@ class SecurityHelper {
             INDEX idx_time (attempt_time)
         )";
         
-        @mysqli_query($GLOBALS['con'], $create_table);
+        try {
+            @mysqli_query($GLOBALS['con'], $create_table);
+        } catch (mysqli_sql_exception $e) {
+            // Ignore permission denied errors if table exists
+        }
         
         // Get current timestamp
         $cutoff_time = date('Y-m-d H:i:s', time() - $window_seconds);

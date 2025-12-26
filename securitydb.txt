@@ -1,0 +1,33 @@
+-- 1. CHỐNG TRÀN BỘ ĐỆM (BUFFER OVERFLOW) & TOÀN VẸN DỮ LIỆU
+-- Bật chế độ Strict Mode: Database sẽ báo lỗi ngay nếu dữ liệu nhập vào dài hơn quy định (vd: tên quá 255 ký tự) thay vì tự cắt bớt.
+SET GLOBAL sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+-- 2. CHỐNG TẤN CÔNG TỪ CHỐI DỊCH VỤ (DoS)
+-- Thêm Index giúp tìm kiếm nhanh hơn, giảm tải cho CPU khi hacker cố tình spam lệnh tìm kiếm.
+-- Nếu Index đã tồn tại, lệnh có thể báo lỗi nhẹ (Duplicate key), bạn có thể bỏ qua.
+ALTER TABLE items ADD INDEX idx_category (category);
+ALTER TABLE items ADD INDEX idx_price (price);
+ALTER TABLE items ADD INDEX idx_name (name);
+ALTER TABLE users ADD INDEX idx_city (city);
+
+-- 3. CHỐNG LEO THANG ĐẶC QUYỀN (PRIVILEGE ESCALATION)
+-- Tạo user riêng cho web với quyền hạn chế. Nếu hacker chiếm được web, họ cũng không thể xóa database.
+CREATE USER IF NOT EXISTS 'websec_user'@'localhost' IDENTIFIED BY 'WebSec@2024Secure';
+
+-- Thu hồi mọi quyền trước đó để reset
+REVOKE ALL PRIVILEGES ON *.* FROM 'websec_user'@'localhost';
+
+-- Chỉ cấp quyền Thêm/Sửa/Xóa/Xem dữ liệu trong database 'store'
+GRANT SELECT, INSERT, UPDATE, DELETE ON store.* TO 'websec_user'@'localhost';
+
+-- Cấm tuyệt đối quyền thay đổi cấu trúc (DROP, ALTER) hoặc cấp quyền cho người khác
+REVOKE DROP, ALTER, CREATE, GRANT OPTION ON store.* FROM 'websec_user'@'localhost';
+
+-- Áp dụng ngay lập tức
+FLUSH PRIVILEGES;
+
+-- 4. KIỂM TRA CÁC BẢNG BẢO MẬT (UNPATCHED & UNENCRYPTED)
+-- Đảm bảo các bảng này đã tồn tại (để chứa dữ liệu mã hóa và lịch sử vá lỗi)
+SHOW TABLES LIKE 'db_migrations';
+SHOW TABLES LIKE 'encrypted_data';
+SHOW TABLES LIKE 'rate_limits';
