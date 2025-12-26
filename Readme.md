@@ -1,202 +1,334 @@
-## 📦 Cài Đặt
+# 🛒 WebSec - Website Bán Hàng Figure
 
-### Bước 1: Clone Repository
+Website thương mại điện tử bán figure được xây dựng bằng PHP và MySQL, tích hợp các tính năng bảo mật nâng cao.
 
-```bash
+---
+
+## 📋 Yêu Cầu Hệ Thống
+
+| Thành phần | Phiên bản yêu cầu |
+|------------|-------------------|
+| XAMPP | 7.4 trở lên (khuyến nghị 8.x) |
+| PHP | 7.4 - 8.x |
+| MySQL/MariaDB | 5.7 trở lên |
+| Trình duyệt | Chrome, Firefox, Edge (phiên bản mới nhất) |
+
+---
+
+## 🚀 Hướng Dẫn Cài Đặt Trên Windows
+
+### Bước 1: Cài Đặt XAMPP
+
+1. **Tải XAMPP** từ: https://www.apachefriends.org/download.html
+   - Chọn phiên bản **PHP 8.x** (khuyến nghị)
+   
+2. **Cài đặt XAMPP**:
+   - Chạy file installer đã tải về
+   - Chọn đường dẫn cài đặt (mặc định: `C:\xampp`)
+   - Tick chọn các thành phần: **Apache**, **MySQL**, **PHP**, **phpMyAdmin**
+   - Hoàn tất cài đặt
+
+3. **Khởi động XAMPP**:
+   - Mở **XAMPP Control Panel** (tìm trong Start Menu)
+   - Click **Start** cho **Apache**
+   - Click **Start** cho **MySQL**
+   - Đảm bảo cả hai hiển thị màu xanh (running)
+
+---
+
+### Bước 2: Tải Source Code
+
+#### Cách 1: Clone bằng Git (Khuyến nghị)
+
+```cmd
+cd C:\xampp\htdocs
 git clone https://github.com/tiphutuoi21/WebSec.git
-cd WebSec
 ```
 
-### Bước 2: Cài Đặt Dependencies (Nếu sử dụng Composer)
+#### Cách 2: Tải ZIP
 
-```bash
+1. Truy cập: https://github.com/tiphutuoi21/WebSec
+2. Click nút **Code** → **Download ZIP**
+3. Giải nén file ZIP vào `C:\xampp\htdocs\WebSec`
+
+**📁 Cấu trúc thư mục đúng:**
+```
+C:\xampp\htdocs\
+└── WebSec\
+    ├── index.php
+    ├── connection.php
+    ├── store.sql
+    ├── bootstrap\
+    ├── css\
+    ├── img\
+    └── ...
+```
+
+---
+
+### Bước 3: Cài Đặt PHPMailer
+
+PHPMailer được sử dụng để gửi email xác thực và đặt lại mật khẩu.
+
+#### Cách 1: Sử dụng Composer (Nếu đã cài Composer)
+
+```cmd
+cd C:\xampp\htdocs\WebSec
 composer install
 ```
 
-Hoặc tải thủ công PHPMailer nếu không dùng Composer:
-- Download PHPMailer từ: https://github.com/PHPMailer/PHPMailer
-- Giải nén vào thư mục `vendor/phpmailer/phpmailer/`
+#### Cách 2: Tải thủ công (Không cần Composer)
 
-### Bước 3: Cấu Hình Permissions
+1. Tải PHPMailer từ: https://github.com/PHPMailer/PHPMailer/releases
+2. Giải nén và copy thư mục vào:
+   ```
+   C:\xampp\htdocs\WebSec\vendor\phpmailer\phpmailer\
+   ```
+3. Đảm bảo cấu trúc thư mục:
+   ```
+   vendor\
+   └── phpmailer\
+       └── phpmailer\
+           └── src\
+               ├── PHPMailer.php
+               ├── SMTP.php
+               └── Exception.php
+   ```
 
-```bash
-# Trên Linux/macOS
-chmod 755 -R .
-chmod 777 -R img/  # Nếu có upload ảnh sản phẩm
+---
+
+### Bước 4: Tạo Database
+
+#### Cách 1: Sử dụng phpMyAdmin (Giao diện đồ họa - Khuyến nghị)
+
+1. Mở trình duyệt, truy cập: **http://localhost/phpmyadmin**
+
+2. **Tạo database mới**:
+   - Click **New** ở menu bên trái
+   - Nhập tên database: `store`
+   - Chọn Collation: `utf8mb4_unicode_ci`
+   - Click **Create**
+
+3. **Import dữ liệu**:
+   - Chọn database `store` vừa tạo ở menu bên trái
+   - Click tab **Import** ở menu trên
+   - Click **Choose File** → Chọn file `store.sql` từ thư mục WebSec
+   - Scroll xuống dưới, click **Import**
+   - Đợi thông báo "Import has been successfully finished"
+
+#### Cách 2: Sử dụng Command Line
+
+1. Mở **Command Prompt** (Run as Administrator)
+
+2. Chạy các lệnh sau:
+
+```cmd
+cd C:\xampp\mysql\bin
+
+REM Đăng nhập MySQL (nhập password nếu có, hoặc Enter nếu không có password)
+mysql -u root -p
+
+REM Trong MySQL shell, chạy:
+CREATE DATABASE store CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE store;
+SOURCE C:/xampp/htdocs/WebSec/store.sql;
+EXIT;
 ```
 
-## 🗄️ Cấu Hình Database
+---
 
-### Bước 1: Tạo Database
+### Bước 5: Cấu Hình Kết Nối Database
 
-```sql
-CREATE DATABASE websec_store CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+1. Mở file `C:\xampp\htdocs\WebSec\connection.php` bằng Notepad hoặc VS Code
 
-### Bước 2: Import Database Schema
-
-```bash
-mysql -u root -p websec_store < store.sql
-```
-
-Hoặc sử dụng phpMyAdmin:
-1. Truy cập phpMyAdmin
-2. Chọn database `websec_store`
-3. Chọn tab "Import"
-4. Upload file `store.sql`
-
-### Bước 3: Cấu Hình Kết Nối Database
-
-Chỉnh sửa file `connection.php`:
+2. Chỉnh sửa thông tin kết nối phù hợp với cài đặt MySQL của bạn:
 
 ```php
 <?php
 $servername = "localhost";
-$username = "root";        // Username MySQL của bạn
-$password = "";            // Password MySQL của bạn
-$database = "websec_store"; // Tên database
+$username = "root";           // Username MySQL (mặc định là root)
+$password = "";               // Password MySQL (mặc định để trống)
+$database = "store";          // Tên database
 
 $con = mysqli_connect($servername, $username, $password, $database);
 
 if (!$con) {
-    die("Connection failed: " . mysqli_connect_error());
+    die("Kết nối thất bại: " . mysqli_connect_error());
 }
+
+mysqli_set_charset($con, "utf8mb4");
 ?>
 ```
 
-### Bước 4: Chạy Migration Scripts (Nếu cần)
+**⚠️ Lưu ý về Password MySQL:**
+- Nếu bạn đặt password cho MySQL khi cài XAMPP, hãy điền vào biến `$password`
+- Nếu không đặt password (mặc định), để trống: `$password = "";`
 
-```bash
-php setup_database.php
-php database_migration.php
-php session_migration.php
-php create_password_history_table.php
+---
+
+### Bước 6: Cấu Hình Email (Tùy chọn)
+
+Nếu bạn muốn sử dụng tính năng gửi email (xác thực tài khoản, quên mật khẩu):
+
+1. Tạo file `.env` trong thư mục WebSec với nội dung:
+
+```env
+# Cấu hình SMTP (Ví dụ dùng Gmail)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_FROM=your-email@gmail.com
+MAIL_FROM_NAME=WebSec Store
 ```
 
-## 📧 Cấu Hình Email
+2. **Đối với Gmail**, bạn cần tạo App Password:
+   - Truy cập: https://myaccount.google.com/security
+   - Bật **Xác minh 2 bước** (2-Step Verification)
+   - Vào: https://myaccount.google.com/apppasswords
+   - Tạo App Password cho "Mail" → Windows Computer
+   - Copy password 16 ký tự và dán vào `MAIL_PASSWORD`
 
-Chỉnh sửa file `config.php` hoặc `MailHelper.php`:
+---
 
-```php
-<?php
-// Cấu hình SMTP
-define('MAIL_HOST', 'smtp.gmail.com');
-define('MAIL_USERNAME', 'your-email@gmail.com');
-define('MAIL_PASSWORD', 'your-app-password');
-define('MAIL_PORT', 587);
-define('MAIL_ENCRYPTION', 'tls');
-define('MAIL_FROM', 'your-email@gmail.com');
-define('MAIL_FROM_NAME', 'WebSec Store');
-?>
-```
+### Bước 7: Chạy Website
 
-**Lưu ý**: Nếu dùng Gmail, bạn cần:
-1. Bật xác thực 2 bước
-2. Tạo App Password tại: https://myaccount.google.com/apppasswords
-3. Sử dụng App Password thay vì mật khẩu thường
+1. **Đảm bảo XAMPP đang chạy**:
+   - Apache: ✅ Running (màu xanh)
+   - MySQL: ✅ Running (màu xanh)
 
-## 🚀 Chạy Ứng Dụng
+2. **Mở trình duyệt và truy cập**:
 
-### Sử dụng XAMPP/WAMP
+   | Trang | URL |
+   |-------|-----|
+   | 🏠 Trang chủ | http://localhost/WebSec/ |
+   | 🔐 Đăng nhập | http://localhost/WebSec/login.php |
+   | 📝 Đăng ký | http://localhost/WebSec/signup.php |
+   | 👤 Admin Login | http://localhost/WebSec/admin_login.php |
+   | 🔧 Admin Panel | http://localhost/WebSec/admin310817.php |
 
-1. Copy toàn bộ thư mục dự án vào:
-   - XAMPP: `C:\xampp\htdocs\WebSec`
-   - WAMP: `C:\wamp64\www\WebSec`
-
-2. Start Apache và MySQL
-
-3. Truy cập:
-   - Frontend: `http://localhost/WebSec`
-   - Admin: `http://localhost/WebSec/admin_login.php`
-
-### Sử dụng PHP Built-in Server (Development)
-
-```bash
-cd WebSec
-php -S localhost:8000
-```
-
-Truy cập: `http://localhost:8000`
-
-### Sử dụng Docker (Optional)
-
-Tạo file `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-services:
-  web:
-    image: php:7.4-apache
-    ports:
-      - "8080:80"
-    volumes:
-      - ./:/var/www/html
-    depends_on:
-      - db
-  
-  db:
-    image: mysql:5.7
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: websec_store
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./store.sql:/docker-entrypoint-initdb.d/store.sql
-```
-
-Chạy:
-```bash
-docker-compose up -d
-```
+---
 
 ## 👤 Tài Khoản Mặc Định
 
-### Admin Account
+### Tài khoản Admin
+
+| Thông tin | Giá trị |
+|-----------|---------|
+| URL | http://localhost/WebSec/admin_login.php |
+| Username | `admin` |
+| Password | `admin123` |
+
+### Tạo Tài Khoản User Mới
+
+1. Truy cập: http://localhost/WebSec/signup.php
+2. Điền thông tin đăng ký
+3. Xác thực email (nếu đã cấu hình SMTP)
+4. Đăng nhập tại: http://localhost/WebSec/login.php
+
+**⚠️ QUAN TRỌNG**: Hãy đổi mật khẩu admin ngay sau khi đăng nhập lần đầu!
+
+---
+
+## 🛠️ Xử Lý Lỗi Thường Gặp
+
+### ❌ Lỗi: "Connection failed" hoặc "Access denied"
+
+**Nguyên nhân**: Sai thông tin kết nối database
+
+**Giải pháp**:
+1. Kiểm tra MySQL đã chạy trong XAMPP Control Panel
+2. Kiểm tra lại username/password trong `connection.php`
+3. Đảm bảo database `store` đã được tạo
+
+---
+
+### ❌ Lỗi: "Table doesn't exist"
+
+**Nguyên nhân**: Chưa import file `store.sql`
+
+**Giải pháp**:
+1. Vào phpMyAdmin: http://localhost/phpmyadmin
+2. Chọn database `store`
+3. Tab Import → Chọn file `store.sql` → Import
+
+---
+
+### ❌ Lỗi: Port 80 hoặc 3306 bị chiếm
+
+**Nguyên nhân**: Có ứng dụng khác đang sử dụng port
+
+**Giải pháp cho Port 80 (Apache)**:
+- Tắt Skype, VMware, hoặc IIS nếu đang chạy
+- Hoặc đổi port Apache:
+  1. Mở XAMPP → Click **Config** bên cạnh Apache → Chọn **httpd.conf**
+  2. Tìm `Listen 80` và đổi thành `Listen 8080`
+  3. Lưu file và restart Apache
+  4. Truy cập: http://localhost:8080/WebSec/
+
+**Giải pháp cho Port 3306 (MySQL)**:
+- Tắt MySQL Workbench hoặc các MySQL server khác đang chạy
+
+---
+
+### ❌ Lỗi: Không gửi được email
+
+**Nguyên nhân**: Chưa cấu hình SMTP hoặc sai thông tin
+
+**Giải pháp**:
+1. Kiểm tra file `.env` đã tạo đúng
+2. Đảm bảo đã bật 2FA và tạo App Password (với Gmail)
+3. Kiểm tra firewall không chặn port 587
+
+---
+
+### ❌ Lỗi: Trang trắng hoặc lỗi 500
+
+**Nguyên nhân**: Lỗi PHP hoặc thiếu extension
+
+**Giải pháp**:
+1. Kiểm tra error log: `C:\xampp\apache\logs\error.log`
+2. Bật hiển thị lỗi trong `php.ini`:
+   - Mở XAMPP → Apache → Config → php.ini
+   - Tìm `display_errors = Off` → Đổi thành `display_errors = On`
+   - Restart Apache
+
+---
+
+## 📁 Cấu Trúc Thư Mục Dự Án
+
 ```
-URL: /admin_login.php hoặc /admin310817.php
-Username: admin
-Password: admin123
+WebSec/
+├── 📄 index.php              # Trang chủ
+├── 📄 connection.php         # Kết nối database
+├── 📄 config.php             # Cấu hình chung
+├── 📄 store.sql              # Database schema
+├── 📄 .env                   # Biến môi trường (tự tạo)
+│
+├── 📁 bootstrap/             # Bootstrap CSS/JS
+├── 📁 css/                   # Custom CSS
+├── 📁 img/                   # Hình ảnh
+│   └── products/             # Hình sản phẩm
+├── 📁 vendor/                # PHPMailer & dependencies
+│
+├── 🔐 Trang User
+│   ├── login.php             # Đăng nhập
+│   ├── signup.php            # Đăng ký
+│   ├── products.php          # Danh sách sản phẩm
+│   ├── product.php           # Chi tiết sản phẩm
+│   ├── cart.php              # Giỏ hàng
+│   ├── checkout.php          # Thanh toán
+│   └── settings.php          # Cài đặt tài khoản
+│
+├── 🔧 Trang Admin
+│   ├── admin_login.php       # Đăng nhập admin
+│   ├── admin_dashboard.php   # Dashboard
+│   ├── admin_manage_*.php    # Quản lý sản phẩm/user/orders
+│   └── admin310817.php       # Admin panel chính
+│
+└── 🛡️ Security
+    ├── SecurityEnhancements.php  # Bảo mật nâng cao
+    ├── SecurityHelper.php        # Helper functions
+    └── SessionManager.php        # Quản lý session
 ```
 
-### Test User Account (Nếu có trong database)
-```
-Email: user@test.com
-Password: user123
-```
-
-**⚠️ QUAN TRỌNG**: Đổi mật khẩu admin ngay sau khi đăng nhập lần đầu!
-
-## ✨ Tính Năng Chính
-
-### Người Dùng (User)
-- ✅ Đăng ký tài khoản với xác thực email
-- ✅ Đăng nhập/Đăng xuất
-- ✅ Xem danh sách sản phẩm
-- ✅ Tìm kiếm sản phẩm (AJAX)
-- ✅ Thêm sản phẩm vào giỏ hàng
-- ✅ Quản lý giỏ hàng
-- ✅ Đặt hàng và thanh toán
-- ✅ Xem lịch sử đơn hàng
-- ✅ Cập nhật thông tin cá nhân
-
-### Quản Trị Viên (Admin)
-- ✅ Dashboard thống kê
-- ✅ Quản lý sản phẩm (CRUD)
-- ✅ Quản lý người dùng
-- ✅ Quản lý đơn hàng
-- ✅ Quản lý khuyến mãi/giảm giá
-- ✅ Xem báo cáo doanh thu
-
-### Tính Năng Bảo Mật
-- 🔒 Session Management với database
-- 🔒 Password hashing (bcrypt/password_hash)
-- 🔒 Password history tracking
-- 🔒 CSRF Protection
-- 🔒 XSS Prevention
-- 🔒 SQL Injection Prevention (Prepared Statements)
-- 🔒 Email Verification
-- 🔒 Access Control (Role-based)
-- 🔒 Secure Password Reset
-- 🔒 Session Timeout
-- 🔒 Brute Force Protection
