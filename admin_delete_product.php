@@ -43,7 +43,7 @@
     mysqli_stmt_close($stmt);
     
     // Log security event
-    SecurityHelper::logSecurityEvent($con, 'admin_delete_product', 'Product ID: ' . $product_id);
+    SecurityEnhancements::logSecurityEvent($con, 'admin_delete_product', 'Product ID: ' . $product_id);
     
     header('location: admin_manage_products.php');
 ?>

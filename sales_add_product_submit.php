@@ -113,7 +113,7 @@
     mysqli_stmt_bind_param($stmt, "sdssi", $name, $price, $description, $image_path, $stock_quantity);
     
     if (mysqli_stmt_execute($stmt)) {
-        SecurityHelper::logSecurityEvent($con, 'product_added', 'Product: ' . $name);
+        SecurityEnhancements::logSecurityEvent($con, 'product_added', 'Product: ' . $name);
         ?>
         <script>
             window.alert("Product added successfully!");

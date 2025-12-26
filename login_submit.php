@@ -90,7 +90,7 @@
     
     if(mysqli_num_rows($result) == 0) {
         // Log failed login attempt
-        SecurityHelper::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
+        SecurityEnhancements::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
         SecurityHelper::recordFailedAttempt($email);
         ?>
         <script>
@@ -107,7 +107,7 @@
         
         if (!$password_correct) {
             // Log failed login attempt
-            SecurityHelper::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
+            SecurityEnhancements::logSecurityEvent($con, 'failed_login_attempt', 'Email: ' . $email);
             SecurityHelper::recordFailedAttempt($email);
             ?>
             <script>
@@ -119,7 +119,7 @@
             // Check if email is verified - REQUIRED for login
             if($row['email_verified'] == 0) {
                 // Email not verified - block login
-                SecurityHelper::logSecurityEvent($con, 'unverified_login_attempt', 'Email: ' . $email);
+                SecurityEnhancements::logSecurityEvent($con, 'unverified_login_attempt', 'Email: ' . $email);
                 ?>
                 <script>
                     window.alert("Vui lòng xác thực email trước khi đăng nhập. Kiểm tra email của bạn để tìm link xác thực. Nếu bạn không nhận được email, vui lòng kiểm tra thư mục spam hoặc đăng ký lại.");
@@ -141,7 +141,7 @@
                     SecurityHelper::clearFailedAttempts($email);
                     
                     // Log successful login
-                    SecurityHelper::logSecurityEvent($con, 'customer_login', 'Successful login');
+                    SecurityEnhancements::logSecurityEvent($con, 'customer_login', 'Successful login');
                     
                     // Ensure session is written before redirect
                     session_write_close();

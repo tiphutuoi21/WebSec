@@ -44,7 +44,7 @@
     
     if(mysqli_stmt_execute($stmt)) {
         // Log security event
-        SecurityHelper::logSecurityEvent($con, 'admin_add_product', 'Product: ' . $name);
+        SecurityEnhancements::logSecurityEvent($con, 'admin_add_product', 'Product: ' . $name);
         
         echo "Product added successfully!";
         ?>

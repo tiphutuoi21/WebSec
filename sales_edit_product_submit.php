@@ -155,7 +155,7 @@
     mysqli_stmt_bind_param($stmt, "sdssii", $name, $price, $description, $image_path, $stock_quantity, $product_id);
     
     if (mysqli_stmt_execute($stmt)) {
-        SecurityHelper::logSecurityEvent($con, 'product_updated', 'Product: ' . $name);
+        SecurityEnhancements::logSecurityEvent($con, 'product_updated', 'Product: ' . $name);
         ?>
         <script>
             window.alert("Product updated successfully!");

@@ -48,7 +48,7 @@
     mysqli_stmt_bind_param($stmt, "i", $product_id);
     
     if (mysqli_stmt_execute($stmt)) {
-        SecurityHelper::logSecurityEvent($con, 'product_deleted', 'Product: ' . $product['name']);
+        SecurityEnhancements::logSecurityEvent($con, 'product_deleted', 'Product: ' . $product['name']);
         ?>
         <script>
             window.alert("Product deleted successfully!");

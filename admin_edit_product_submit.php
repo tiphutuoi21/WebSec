@@ -120,7 +120,7 @@
     
     if(mysqli_stmt_execute($stmt)) {
         // Log security event
-        SecurityHelper::logSecurityEvent($con, 'admin_edit_product', 'Product ID: ' . $id);
+        SecurityEnhancements::logSecurityEvent($con, 'admin_edit_product', 'Product ID: ' . $id);
         
         echo "<div style='text-align: center; padding: 50px;'>";
         echo "<h2 style='color: green;'>✓ Cập nhật sản phẩm thành công!</h2>";

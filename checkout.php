@@ -132,7 +132,7 @@
         mysqli_commit($con);
         
         // Log successful order
-        SecurityHelper::logSecurityEvent($con, 'order_placed', 'Order #' . $order_id . ' placed successfully');
+        SecurityEnhancements::logSecurityEvent($con, 'order_placed', 'Order #' . $order_id . ' placed successfully');
         
         // Redirect to success page
         $_SESSION['order_id'] = $order_id;

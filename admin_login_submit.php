@@ -53,7 +53,7 @@
     
     if(mysqli_num_rows($result) == 0) {
         // Log failed admin login attempt
-        SecurityHelper::logSecurityEvent($con, 'failed_admin_login', 'Email: ' . $email);
+        SecurityEnhancements::logSecurityEvent($con, 'failed_admin_login', 'Email: ' . $email);
         $admin_rate_limit_key = 'admin_' . $email;
         SecurityHelper::recordFailedAttempt($admin_rate_limit_key);
         ?>
@@ -70,7 +70,7 @@
         
         if (!$password_correct) {
             // Log failed login attempt
-            SecurityHelper::logSecurityEvent($con, 'failed_admin_login', 'Email: ' . $email);
+            SecurityEnhancements::logSecurityEvent($con, 'failed_admin_login', 'Email: ' . $email);
             $admin_rate_limit_key = 'admin_' . $email;
             SecurityHelper::recordFailedAttempt($admin_rate_limit_key);
             ?>
@@ -94,7 +94,7 @@
             SecurityHelper::clearFailedAttempts($admin_rate_limit_key);
             
             // Log successful admin login
-            SecurityHelper::logSecurityEvent($con, 'admin_login', 'Successful admin login');
+            SecurityEnhancements::logSecurityEvent($con, 'admin_login', 'Successful admin login');
             
             // Redirect based on role
             if (intval($row['role_id']) === 2) {
